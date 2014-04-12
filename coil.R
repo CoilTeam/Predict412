@@ -1,8 +1,8 @@
-data <- as.data.frame(read.csv("D:/R Working Directory/Git/Predict412/ticdata2000.csv"))
+data <- read.csv("./ticdata2000.csv")
 
-
+str(data)
 head(data)
-rows  <- nrow(data)
+
 compcases  <- sum(complete.cases(data))
 # if this logical test returns false, data is missing.
 rows==compcases
