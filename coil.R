@@ -1,8 +1,5 @@
 rm(list=ls())
-
-data <- read.csv("./ticdata2000.csv")
-
-str(data)
+data <- as.data.frame(read.csv("/ticdata2000.csv"))
 
 head(data)
 
@@ -57,6 +54,7 @@ res1 <- cor.mtest(data,0.90)
 corrplot(corrmat, type="upper", mar=c(3, 2, 2, 0), diag=TRUE,  order = "hclust",p.mat = res1[[1]], insig = "blank", sig.level = 0.10, tl.pos="lt", tl.cex=0.6, cl.cex=0.6, cl.ratio=0.2, cex.axis = 0.3, cl.pos="r", tl.offset=1)
 
 # Need to figure out how to reduce the size of these numbers or increase the size of each box to make them readable.  For now, comment this version of the lower half out and swap in ellipses
+
 # corrplot(corrmat, add=TRUE,type="lower", diag=FALSE, tl.pos="n", p.mat = res1[[1]], insig = "blank", method="number", order = "hclust", sig.level = 0.10, cl.pos="n", tl.cex=0.2)
 
 corrplot(corrmat, add=TRUE,type="lower", diag=FALSE, tl.pos="n", p.mat = res1[[1]], insig = "blank", method="ellipse", order = "hclust", sig.level = 0.10, cl.pos="n")
@@ -64,4 +62,5 @@ corrplot(corrmat, add=TRUE,type="lower", diag=FALSE, tl.pos="n", p.mat = res1[[1
 
 # alternate view - use ellipses until I can fix the lower corr coeff text size in the previous plot
 corrplot(corrmat, method="ellipse", mar=c(3, 2, 2, 0), order = "hclust", p.mat = res1[[1]], sig.level = 0.10, insig = "blank", tl.cex=0.6, tl.offset=1)
+
 
