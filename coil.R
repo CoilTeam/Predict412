@@ -3,12 +3,6 @@ data <- as.data.frame(read.csv("/ticdata2000.csv"))
 
 head(data)
 
-layout(matrix(1:4,2,2))
-for(n in names(data)){
-  hist(data[,n], main = n, xlab = n)
-}
-
-
 # check for missing data
 rows  <- nrow(data)
 compcases  <- sum(complete.cases(data))
