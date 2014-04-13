@@ -1,5 +1,5 @@
 rm(list=ls())
-data <- as.data.frame(read.csv("D:/R Working Directory/Git/Predict412/ticdata2000.csv"))
+data <- as.data.frame(read.csv("/ticdata2000.csv"))
 
 head(data)
 
