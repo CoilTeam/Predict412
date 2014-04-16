@@ -1,7 +1,12 @@
 rm(list=ls())
-data <- as.data.frame(read.csv("/ticdata2000.csv"))
+data <- as.data.frame(read.csv("./ticdata2000.csv"))
 
 head(data)
+
+# convert the demographic data to categorical/factor
+cols <- names(data)[grep('^m', names(raw))]
+cols <- c(cols, 'caravan')
+data[,cols] <- lapply(data[,cols], as.factor)
 
 # check for missing data
 rows  <- nrow(data)
