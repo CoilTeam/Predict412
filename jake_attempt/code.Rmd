@@ -54,8 +54,9 @@ table(data$set, data$caravan)
 ```
 We see that the training set is sufficiently large, while the test set has a good number of observations where _caravan_ = 1. Let's split these into their own sets for easier usage.
 ```{r}
-train <- data[data$set=='Train',]
-test <- data[data$set=='Test',]
+train <- data[data$set=='Train',-87]
+test.x <- data[data$set=='Test',1:85]
+test.y <- data[data$set=='Test',86]
 ```
 
 ### Define Formula
@@ -72,7 +73,7 @@ print(f)
 
 ### Logistic Regression
 ```{r}
-lrm <- glm(f, data, family=binomial)
+lrm <- glm(f, train, family=binomial)
 ```
 
 ### Decision Tree
