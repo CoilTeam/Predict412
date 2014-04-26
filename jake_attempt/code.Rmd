@@ -10,7 +10,6 @@
 raw <- read.csv('../ticdata2000.csv')
 data <- raw # make a backup just in case
 ```
-
 ### 2.1.2 Modify Datatypes
 ```{r}
 categorical_names <- grep('^m|^caravan', names(data))
@@ -29,8 +28,19 @@ summary(data)
 ### 2.2.2 Univariate EDA
 
 ### Multivariate EDA: Explanatory vs Reponse
+```{r}
+require(ggplot2)
+```
+
 #### Categorical Variables
+```{r}
+ggplot()
+```
+
 #### Numeric Variables
+```{r}
+
+```
 
 2.3 Data Selection
 ------------------
@@ -63,7 +73,7 @@ test.y <- data[data$set=='Test',86]
 We have to define the formula that we're modeling upon first. We can do this by joining the column names together into a string, and then converting that string into the "formula" object.
 ```{r}
 y <- names(data)[86]
-x <- paste(names(data)[-categorical_names], collapse='+')
+x <- paste(names(data)[categorical_names], collapse='+')
 f <- as.formula(paste(y, x, sep='~'))
 ```
 We now have the formula, shown below:
@@ -83,4 +93,7 @@ dt <- rpart(f, data, method='class')
 printcp(dt)
 ```
 
-### 
+### Naive Bayes
+```{r}
+
+```

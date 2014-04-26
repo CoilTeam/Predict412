@@ -394,40 +394,12 @@ pca <- princomp(data[, -86])
 
 2.4 Modeling
 ------------
-### Define Formula
-We have to define the formula that we're modeling upon first. We can do this by joining the column names together into a string, and then converting that string into the "formula" object.
-
-```r
-y <- names(data)[86]
-x <- paste(names(data)[-categorical_names], collapse = "+")
-f <- as.formula(paste(y, x, sep = "~"))
-```
-
-We now have the formula, shown below:
-
-```r
-print(f)
-```
-
-```
-## caravan ~ pwapart + pwabedr + pwaland + ppersaut + pbesaut + 
-##     pmotsco + pvraaut + paanhang + ptractor + pwerkt + pbrom + 
-##     pleven + ppersong + pgezong + pwaoreg + pbrand + pzeilpl + 
-##     pplezier + pfiets + pinboed + pbystand + awapart + awabedr + 
-##     awaland + apersaut + abesaut + amotsco + avraaut + aaanhang + 
-##     atractor + awerkt + abrom + aleven + apersong + agezong + 
-##     awaoreg + abrand + azeilpl + aplezier + afiets + ainboed + 
-##     abystand
-```
-
-
 ### Split Test/Train
 
 ```r
 data$set <- "Train"
 rand <- sample(1:10, nrow(data), replace = T)
 data[rand > 8, "set"] <- "Test"
-data$set <- factor(data$set)
 ```
 
 Let's look at the breakdown of the response variable between the two sets to make sure there's good coverage in both:
@@ -439,20 +411,60 @@ table(data$set, data$caravan)
 ```
 ##        
 ##            0    1
-##   Test  1106   64
-##   Train 4368  284
+##   Test  1132   69
+##   Train 4342  279
 ```
 
-We see that the training set is sufficiently large, while the test set has a good number of observations where _caravan_ = 1.
+We see that the training set is sufficiently large, while the test set has a good number of observations where _caravan_ = 1. Let's split these into their own sets for easier usage.
+
+```r
+train <- data[data$set == "Train", -87]
+test.x <- data[data$set == "Test", 1:85]
+test.y <- data[data$set == "Test", 86]
+```
+
+
+### Define Formula
+We have to define the formula that we're modeling upon first. We can do this by joining the column names together into a string, and then converting that string into the "formula" object.
+
+```r
+y <- names(data)[86]
+x <- paste(names(data)[-86], collapse = "+")
+f <- as.formula(paste(y, x, sep = "~"))
+```
+
+We now have the formula, shown below:
+
+```r
+print(f)
+```
+
+```
+## caravan ~ mostype + maanthui + mgemomv + mgemleef + moshoofd + 
+##     mgodrk + mgodpr + mgodov + mgodge + mrelge + mrelsa + mrelov + 
+##     mfalleen + mfgekind + mfwekind + moplhoog + moplmidd + mopllaag + 
+##     mberhoog + mberzelf + mberboer + mbermidd + mberarbg + mberarbo + 
+##     mska + mskb1 + mskb2 + mskc + mskd + mhhuur + mhkoop + maut1 + 
+##     maut2 + maut0 + mzfonds + mzpart + minkm30 + mink3045 + mink4575 + 
+##     mink7512 + mink123m + minkgem + mkoopkla + pwapart + pwabedr + 
+##     pwaland + ppersaut + pbesaut + pmotsco + pvraaut + paanhang + 
+##     ptractor + pwerkt + pbrom + pleven + ppersong + pgezong + 
+##     pwaoreg + pbrand + pzeilpl + pplezier + pfiets + pinboed + 
+##     pbystand + awapart + awabedr + awaland + apersaut + abesaut + 
+##     amotsco + avraaut + aaanhang + atractor + awerkt + abrom + 
+##     aleven + apersong + agezong + awaoreg + abrand + azeilpl + 
+##     aplezier + afiets + ainboed + abystand + set
+```
+
 
 ### Logistic Regression
 
 ```r
-lrm <- glm(f, data, family = binomial)
+lrm <- glm(f, train, family = binomial)
 ```
 
 ```
-## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+## Error: object 'set' not found
 ```
 
 
