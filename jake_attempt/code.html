@@ -193,8 +193,7 @@ data &lt;- raw  # make a backup just in case
 
 <h3>2.1.2 Modify Datatypes</h3>
 
-<pre><code class="r">categorical_names &lt;- names(data)[grep(&quot;^m&quot;, names(data))]
-categorical_names &lt;- c(&quot;caravan&quot;, categorical_names)
+<pre><code class="r">categorical_names &lt;- grep(&quot;^m|^caravan&quot;, names(data))
 data[, categorical_names] &lt;- lapply(data[, categorical_names], as.factor)
 </code></pre>
 
@@ -544,16 +543,36 @@ data[, categorical_names] &lt;- lapply(data[, categorical_names], as.factor)
 
 <h3>2.2.2 Univariate EDA</h3>
 
+<h3>Multivariate EDA: Explanatory vs Reponse</h3>
+
+<h4>Categorical Variables</h4>
+
+<h4>Numeric Variables</h4>
+
 <h2>2.3 Data Selection</h2>
+
+<h3>PCA</h3>
+
+<pre><code class="r">pca &lt;- princomp(data[, -86])
+</code></pre>
+
+<pre><code>## Error: &#39;x&#39; must contain finite values only
+</code></pre>
 
 <h2>2.4 Modeling</h2>
 
-<h3>Logistic Regression</h3>
+<h3>Define Formula</h3>
+
+<p>We have to define the formula that we&#39;re modeling upon first. We can do this by joining the column names together into a string, and then converting that string into the &ldquo;formula&rdquo; object.</p>
 
 <pre><code class="r">y &lt;- names(data)[86]
-x &lt;- paste(names(data)[44:85], collapse = &quot;+&quot;)
+x &lt;- paste(names(data)[-categorical_names], collapse = &quot;+&quot;)
 f &lt;- as.formula(paste(y, x, sep = &quot;~&quot;))
-print(f)
+</code></pre>
+
+<p>We now have the formula, shown below:</p>
+
+<pre><code class="r">print(f)
 </code></pre>
 
 <pre><code>## caravan ~ pwapart + pwabedr + pwaland + ppersaut + pbesaut + 
@@ -565,6 +584,29 @@ print(f)
 ##     awaoreg + abrand + azeilpl + aplezier + afiets + ainboed + 
 ##     abystand
 </code></pre>
+
+<h3>Split Test/Train</h3>
+
+<pre><code class="r">data$set &lt;- &quot;Train&quot;
+rand &lt;- sample(1:10, nrow(data), replace = T)
+data[rand &gt; 8, &quot;set&quot;] &lt;- &quot;Test&quot;
+data$set &lt;- factor(data$set)
+</code></pre>
+
+<p>Let&#39;s look at the breakdown of the response variable between the two sets to make sure there&#39;s good coverage in both:</p>
+
+<pre><code class="r">table(data$set, data$caravan)
+</code></pre>
+
+<pre><code>##        
+##            0    1
+##   Test  1106   64
+##   Train 4368  284
+</code></pre>
+
+<p>We see that the training set is sufficiently large, while the test set has a good number of observations where <em>caravan</em> = 1.</p>
+
+<h3>Logistic Regression</h3>
 
 <pre><code class="r">lrm &lt;- glm(f, data, family = binomial)
 </code></pre>
@@ -578,6 +620,25 @@ print(f)
 </code></pre>
 
 <pre><code>## Loading required package: rpart
+</code></pre>
+
+<pre><code class="r">dt &lt;- rpart(f, data, method = &quot;class&quot;)
+printcp(dt)
+</code></pre>
+
+<pre><code>## 
+## Classification tree:
+## rpart(formula = f, data = data, method = &quot;class&quot;)
+## 
+## Variables actually used in tree construction:
+## character(0)
+## 
+## Root node error: 348/5822 = 0.06
+## 
+## n= 5822 
+## 
+##   CP nsplit rel error xerror xstd
+## 1  0      0         1      0    0
 </code></pre>
 
 </body>

@@ -16,8 +16,7 @@ data <- raw  # make a backup just in case
 ### 2.1.2 Modify Datatypes
 
 ```r
-categorical_names <- names(data)[grep("^m", names(data))]
-categorical_names <- c("caravan", categorical_names)
+categorical_names <- grep("^m|^caravan", names(data))
 data[, categorical_names] <- lapply(data[, categorical_names], as.factor)
 ```
 
@@ -375,17 +374,38 @@ summary(data)
 
 ### 2.2.2 Univariate EDA
 
+### Multivariate EDA: Explanatory vs Reponse
+#### Categorical Variables
+#### Numeric Variables
+
 2.3 Data Selection
 ------------------
+### PCA
+
+```r
+pca <- princomp(data[, -86])
+```
+
+```
+## Error: 'x' must contain finite values only
+```
+
+
 
 2.4 Modeling
 ------------
-### Logistic Regression
+### Define Formula
+We have to define the formula that we're modeling upon first. We can do this by joining the column names together into a string, and then converting that string into the "formula" object.
 
 ```r
 y <- names(data)[86]
-x <- paste(names(data)[44:85], collapse = "+")
+x <- paste(names(data)[-categorical_names], collapse = "+")
 f <- as.formula(paste(y, x, sep = "~"))
+```
+
+We now have the formula, shown below:
+
+```r
 print(f)
 ```
 
@@ -399,6 +419,33 @@ print(f)
 ##     awaoreg + abrand + azeilpl + aplezier + afiets + ainboed + 
 ##     abystand
 ```
+
+
+### Split Test/Train
+
+```r
+data$set <- "Train"
+rand <- sample(1:10, nrow(data), replace = T)
+data[rand > 8, "set"] <- "Test"
+data$set <- factor(data$set)
+```
+
+Let's look at the breakdown of the response variable between the two sets to make sure there's good coverage in both:
+
+```r
+table(data$set, data$caravan)
+```
+
+```
+##        
+##            0    1
+##   Test  1106   64
+##   Train 4368  284
+```
+
+We see that the training set is sufficiently large, while the test set has a good number of observations where _caravan_ = 1.
+
+### Logistic Regression
 
 ```r
 lrm <- glm(f, data, family = binomial)
@@ -417,6 +464,27 @@ require(rpart)
 
 ```
 ## Loading required package: rpart
+```
+
+```r
+dt <- rpart(f, data, method = "class")
+printcp(dt)
+```
+
+```
+## 
+## Classification tree:
+## rpart(formula = f, data = data, method = "class")
+## 
+## Variables actually used in tree construction:
+## character(0)
+## 
+## Root node error: 348/5822 = 0.06
+## 
+## n= 5822 
+## 
+##   CP nsplit rel error xerror xstd
+## 1  0      0         1      0    0
 ```
 
 
