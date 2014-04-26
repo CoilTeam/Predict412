@@ -1,0 +1,52 @@
+1. Introduction
+============
+
+2. Process
+=======
+2.1 Data Preparation
+----------------
+### 2.1.1 Import Dataset
+```{r}
+raw <- read.csv('../ticdata2000.csv')
+data <- raw # make a backup just in case
+```
+
+### 2.1.2 Modify Datatypes
+```{r}
+categorical_names <- names(data)[grep('^m', names(data))]
+categorical_names <- c('caravan', categorical_names)
+data[,categorical_names] <- lapply(data[,categorical_names], as.factor)
+```
+
+2.2 Data Exploration
+----------------
+### 2.2.1 Summary EDA
+```{r}
+head(data)
+str(data)
+summary(data)
+```
+
+### 2.2.2 Univariate EDA
+
+2.3 Data Selection
+------------------
+
+2.4 Modeling
+------------
+### Logistic Regression
+```{r}
+y <- names(data)[86]
+x <- paste(names(data)[44:85],collapse='+')
+f <- as.formula(paste(y, x, sep='~'))
+print(f)
+lrm <- glm(f, data, family=binomial)
+```
+
+### Decision Tree
+```{r}
+require(rpart)
+
+```
+
+### 
