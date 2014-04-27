@@ -29,6 +29,8 @@ for (n in 2:85){
   ))
 }
 
+# Examine the table
+View(EDA)
 
 ############### EXPLANATION ####################
 ## The above code creates a data frame that
