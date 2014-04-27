@@ -39,16 +39,16 @@ for (n in 2:85){
 #########################################################################
 ## Example:
 ## Category               Variable  n    percentage sd (standard deviation)
-## Average Family	        MOSHOOFD	886	 6.66	     0.2494539
-## Career Loners	        MOSHOOFD	52	 0.00	     0.0000000
-## Conservative families	MOSHOOFD	667	 6.30	     0.2430886
-## Cruising Seniors	      MOSHOOFD	205	 1.95	     0.1386552
-## Driven Growers	        MOSHOOFD	502	 13.15	   0.3382552
-## Family with grown ups	MOSHOOFD	1563 5.69	     0.2318055
-## Farmers	              MOSHOOFD	276	 1.81      0.1336130
-## Living well	          MOSHOOFD	569	 2.64	     0.1603505
-## Retired and Religeous	MOSHOOFD	550	 3.64	     0.1873637
-## Successful hedonists	  MOSHOOFD	552	 8.70	     0.2820269
+## Average Family         MOSHOOFD  886  6.66       0.2494539
+## Career Loners          MOSHOOFD  52   0.00       0.0000000
+## Conservative families  MOSHOOFD  667  6.30       0.2430886
+## Cruising Seniors       MOSHOOFD  205  1.95       0.1386552
+## Driven Growers         MOSHOOFD  502  13.15      0.3382552
+## Family with grown ups  MOSHOOFD  1563 5.69       0.2318055
+## Farmers                MOSHOOFD  276  1.81       0.1336130
+## Living well            MOSHOOFD  569  2.64       0.1603505
+## Retired and Religeous  MOSHOOFD  550  3.64       0.1873637
+## Successful hedonists   MOSHOOFD  552  8.70       0.2820269
 #########################################################################
 ## In the example above, you can see that the "Driven Growers"
 ## in the MOSHOOFD variable have a higher than average
