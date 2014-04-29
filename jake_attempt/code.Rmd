@@ -34,7 +34,11 @@ require(ggplot2)
 
 #### Categorical Variables
 ```{r}
-ggplot()
+for(i in 1:(ncol(data)-1)){
+  
+}
+ggplot(data, aes(x=maanthui, fill=caravan)) +
+  geom_bar()
 ```
 
 #### Numeric Variables

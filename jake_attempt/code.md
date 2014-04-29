@@ -12,7 +12,6 @@ raw <- read.csv("../ticdata2000.csv")
 data <- raw  # make a backup just in case
 ```
 
-
 ### 2.1.2 Modify Datatypes
 
 ```r
@@ -375,8 +374,30 @@ summary(data)
 ### 2.2.2 Univariate EDA
 
 ### Multivariate EDA: Explanatory vs Reponse
+
+```r
+require(ggplot2)
+```
+
+```
+## Loading required package: ggplot2
+```
+
+
 #### Categorical Variables
+
+```r
+ggplot(data, aes(x = pwapart, colour = caravan)) + geom_bar()
+```
+
+```
+## Error: could not find function "ggplot"
+```
+
+
 #### Numeric Variables
+
+
 
 2.3 Data Selection
 ------------------
@@ -411,8 +432,8 @@ table(data$set, data$caravan)
 ```
 ##        
 ##            0    1
-##   Test  1132   69
-##   Train 4342  279
+##   Test  1112   73
+##   Train 4362  275
 ```
 
 We see that the training set is sufficiently large, while the test set has a good number of observations where _caravan_ = 1. Let's split these into their own sets for easier usage.
@@ -429,7 +450,7 @@ We have to define the formula that we're modeling upon first. We can do this by 
 
 ```r
 y <- names(data)[86]
-x <- paste(names(data)[-86], collapse = "+")
+x <- paste(names(data)[categorical_names], collapse = "+")
 f <- as.formula(paste(y, x, sep = "~"))
 ```
 
@@ -446,14 +467,7 @@ print(f)
 ##     mberhoog + mberzelf + mberboer + mbermidd + mberarbg + mberarbo + 
 ##     mska + mskb1 + mskb2 + mskc + mskd + mhhuur + mhkoop + maut1 + 
 ##     maut2 + maut0 + mzfonds + mzpart + minkm30 + mink3045 + mink4575 + 
-##     mink7512 + mink123m + minkgem + mkoopkla + pwapart + pwabedr + 
-##     pwaland + ppersaut + pbesaut + pmotsco + pvraaut + paanhang + 
-##     ptractor + pwerkt + pbrom + pleven + ppersong + pgezong + 
-##     pwaoreg + pbrand + pzeilpl + pplezier + pfiets + pinboed + 
-##     pbystand + awapart + awabedr + awaland + apersaut + abesaut + 
-##     amotsco + avraaut + aaanhang + atractor + awerkt + abrom + 
-##     aleven + apersong + agezong + awaoreg + abrand + azeilpl + 
-##     aplezier + afiets + ainboed + abystand + set
+##     mink7512 + mink123m + minkgem + mkoopkla + caravan
 ```
 
 
@@ -464,7 +478,9 @@ lrm <- glm(f, train, family = binomial)
 ```
 
 ```
-## Error: object 'set' not found
+## Warning: the response appeared on the right-hand side and was dropped
+## Warning: problem with term 44 in model.matrix: no columns are assigned
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
 ```
 
 
@@ -480,6 +496,15 @@ require(rpart)
 
 ```r
 dt <- rpart(f, data, method = "class")
+```
+
+```
+## Warning: the response appeared on the right-hand side and was dropped
+## Warning: problem with term 44 in model.matrix: no columns are assigned
+## Warning: longer object length is not a multiple of shorter object length
+```
+
+```r
 printcp(dt)
 ```
 
@@ -500,4 +525,6 @@ printcp(dt)
 ```
 
 
-### 
+### Naive Bayes
+
+

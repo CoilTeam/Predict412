@@ -3,7 +3,6 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-<meta http-equiv="x-ua-compatible" content="IE=9" >
 
 <title>1. Introduction</title>
 
@@ -545,7 +544,19 @@ data[, categorical_names] &lt;- lapply(data[, categorical_names], as.factor)
 
 <h3>Multivariate EDA: Explanatory vs Reponse</h3>
 
+<pre><code class="r">require(ggplot2)
+</code></pre>
+
+<pre><code>## Loading required package: ggplot2
+</code></pre>
+
 <h4>Categorical Variables</h4>
+
+<pre><code class="r">ggplot(data, aes(x = pwapart, colour = caravan)) + geom_bar()
+</code></pre>
+
+<pre><code>## Error: could not find function &quot;ggplot&quot;
+</code></pre>
 
 <h4>Numeric Variables</h4>
 
@@ -575,8 +586,8 @@ data[rand &gt; 8, &quot;set&quot;] &lt;- &quot;Test&quot;
 
 <pre><code>##        
 ##            0    1
-##   Test  1132   69
-##   Train 4342  279
+##   Test  1112   73
+##   Train 4362  275
 </code></pre>
 
 <p>We see that the training set is sufficiently large, while the test set has a good number of observations where <em>caravan</em> = 1. Let&#39;s split these into their own sets for easier usage.</p>
@@ -591,7 +602,7 @@ test.y &lt;- data[data$set == &quot;Test&quot;, 86]
 <p>We have to define the formula that we&#39;re modeling upon first. We can do this by joining the column names together into a string, and then converting that string into the &ldquo;formula&rdquo; object.</p>
 
 <pre><code class="r">y &lt;- names(data)[86]
-x &lt;- paste(names(data)[-86], collapse = &quot;+&quot;)
+x &lt;- paste(names(data)[categorical_names], collapse = &quot;+&quot;)
 f &lt;- as.formula(paste(y, x, sep = &quot;~&quot;))
 </code></pre>
 
@@ -606,14 +617,7 @@ f &lt;- as.formula(paste(y, x, sep = &quot;~&quot;))
 ##     mberhoog + mberzelf + mberboer + mbermidd + mberarbg + mberarbo + 
 ##     mska + mskb1 + mskb2 + mskc + mskd + mhhuur + mhkoop + maut1 + 
 ##     maut2 + maut0 + mzfonds + mzpart + minkm30 + mink3045 + mink4575 + 
-##     mink7512 + mink123m + minkgem + mkoopkla + pwapart + pwabedr + 
-##     pwaland + ppersaut + pbesaut + pmotsco + pvraaut + paanhang + 
-##     ptractor + pwerkt + pbrom + pleven + ppersong + pgezong + 
-##     pwaoreg + pbrand + pzeilpl + pplezier + pfiets + pinboed + 
-##     pbystand + awapart + awabedr + awaland + apersaut + abesaut + 
-##     amotsco + avraaut + aaanhang + atractor + awerkt + abrom + 
-##     aleven + apersong + agezong + awaoreg + abrand + azeilpl + 
-##     aplezier + afiets + ainboed + abystand + set
+##     mink7512 + mink123m + minkgem + mkoopkla + caravan
 </code></pre>
 
 <h3>Logistic Regression</h3>
@@ -621,7 +625,9 @@ f &lt;- as.formula(paste(y, x, sep = &quot;~&quot;))
 <pre><code class="r">lrm &lt;- glm(f, train, family = binomial)
 </code></pre>
 
-<pre><code>## Error: object &#39;set&#39; not found
+<pre><code>## Warning: the response appeared on the right-hand side and was dropped
+## Warning: problem with term 44 in model.matrix: no columns are assigned
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
 </code></pre>
 
 <h3>Decision Tree</h3>
@@ -633,7 +639,14 @@ f &lt;- as.formula(paste(y, x, sep = &quot;~&quot;))
 </code></pre>
 
 <pre><code class="r">dt &lt;- rpart(f, data, method = &quot;class&quot;)
-printcp(dt)
+</code></pre>
+
+<pre><code>## Warning: the response appeared on the right-hand side and was dropped
+## Warning: problem with term 44 in model.matrix: no columns are assigned
+## Warning: longer object length is not a multiple of shorter object length
+</code></pre>
+
+<pre><code class="r">printcp(dt)
 </code></pre>
 
 <pre><code>## 
@@ -650,6 +663,8 @@ printcp(dt)
 ##   CP nsplit rel error xerror xstd
 ## 1  0      0         1      0    0
 </code></pre>
+
+<h3>Naive Bayes</h3>
 
 </body>
 
