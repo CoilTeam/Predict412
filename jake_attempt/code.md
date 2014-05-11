@@ -31,6 +31,7 @@ library(randomForest)
 
 ```r
 library(e1071)
+library(nnet)
 ```
 
 
@@ -599,16 +600,16 @@ rf <- randomForest(CARAVAN ~ ., train)
 Error that it can't handle >32 categories. Convert and try with continuous data instead.
 
 ```r
-train.numStype <- train
-train.numStype$STYPE <- as.numeric(train$STYPE)
-rf <- randomForest(CARAVAN ~ ., train.numStype)
+train.temp <- train
+train.temp$STYPE <- as.numeric(train.temp$STYPE)
+rf <- randomForest(CARAVAN ~ ., train.temp)
 rf
 ```
 
 ```
 ## 
 ## Call:
-##  randomForest(formula = CARAVAN ~ ., data = train.numStype) 
+##  randomForest(formula = CARAVAN ~ ., data = train.temp) 
 ##                Type of random forest: classification
 ##                      Number of trees: 500
 ## No. of variables tried at each split: 9
@@ -620,15 +621,69 @@ rf
 ## insurance           252         4     0.98438
 ```
 
-It runs now, which is good. However, it only correctly identifies 3 "insurance" observations correctly.
+It runs now, which is good. However, it only correctly identifies 3 "insurance" observations correctly (in-sample). Let's try out-of-sample instead and see how the model fares.
+
+```r
+test.temp <- test
+test.temp$STYPE <- as.numeric(test.temp$STYPE)
+rf.pred <- predict(rf, test.temp)
+table(test$CARAVAN, rf.pred)
+```
+
+```
+##              rf.pred
+##               noinsurance insurance
+##   noinsurance        1637        18
+##   insurance            88         4
+```
+
+Unfortunately the model doesn't do well against the test data either. 
 
 ### Naive Bayes
-_Unreliable due to independence requirement_
+_Unreliable due to independence requirement. Skipping._
 
 ```r
 nb <- naiveBayes(CARAVAN ~ ., train)
 ```
 
+
+### Neural Net
+
+```r
+nn <- nnet(CARAVAN ~ ., train, size = 1)
+```
+
+```
+## # weights:  657
+## initial  value 2423.323436 
+## iter  10 value 923.506306
+## iter  20 value 820.282895
+## iter  30 value 762.422357
+## iter  40 value 734.048058
+## iter  50 value 722.150639
+## iter  60 value 709.831998
+## iter  70 value 701.967065
+## iter  80 value 691.574609
+## iter  90 value 683.487841
+## iter 100 value 678.832339
+## final  value 678.832339 
+## stopped after 100 iterations
+```
+
+
+```r
+nn.pred <- predict(nn, test, type = "class")
+table(test$CARAVAN, nn.pred)
+```
+
+```
+##              nn.pred
+##               noinsurance
+##   noinsurance        1655
+##   insurance            92
+```
+
+The neural has predicted all the test observations to be 'noinsurance'. This is probably due to the difference in class counts in the observations.
 
 
 2.5 Modeling Iter. 2
@@ -716,10 +771,10 @@ printcp(dt)
 ## n= 7659 
 ## 
 ##      CP nsplit rel error xerror  xstd
-## 1 0.371      0      1.00   1.02 0.011
+## 1 0.371      0      1.00   1.03 0.011
 ## 2 0.042      1      0.63   0.63 0.011
 ## 3 0.011      2      0.59   0.58 0.010
-## 4 0.010      4      0.56   0.55 0.010
+## 4 0.010      4      0.56   0.56 0.010
 ```
 
 Much better this time. 4 variables were used in tree construction this time.
@@ -741,32 +796,66 @@ Unfortunately the results still aren't the best. The false negative rate is huge
 ### Random Forest
 
 ```r
-rf <- randomForest(CARAVAN ~ ., train.over)
-```
-
-```
-## Error: Can not handle categorical predictors with more than 32 categories.
+train.temp <- train.over
+train.temp$STYPE <- as.numeric(train.temp$STYPE)
+rf <- randomForest(CARAVAN ~ ., train.temp)
 ```
 
 These in-sample results are great! This time the forest was able to correctly identify all of the "insurance" observations (though they are oversampled).
 
 ```r
-rf.pred <- predict(rf, test)
-```
-
-```
-## Error: New factor levels not present in the training data
-```
-
-```r
+test.temp <- test
+test.temp$STYPE <- as.numeric(test.temp$STYPE)
+rf.pred <- predict(rf, test.temp)
 table(test$CARAVAN, rf.pred)
 ```
 
 ```
-## Error: object 'rf.pred' not found
+##              rf.pred
+##               noinsurance insurance
+##   noinsurance        1573        82
+##   insurance            83         9
 ```
 
-When looking at the test set, unfortunately, the accuracy decreases drastically...
+When looking at the test set, unfortunately, the out-of-samply accuracy decreases drastically...
+
+### Neural Net
+
+```r
+nn <- nnet(CARAVAN ~ ., train.over, size = 1)
+```
+
+```
+## # weights:  657
+## initial  value 5316.038904 
+## iter  10 value 4147.771607
+## iter  20 value 3739.432462
+## iter  30 value 3495.464751
+## iter  40 value 3329.975538
+## iter  50 value 3254.903831
+## iter  60 value 3211.337071
+## iter  70 value 3176.527704
+## iter  80 value 3148.131212
+## iter  90 value 3109.657133
+## iter 100 value 3107.635638
+## final  value 3107.635638 
+## stopped after 100 iterations
+```
+
+
+```r
+nn.pred <- predict(nn, test, type = "class")
+table(test$CARAVAN, nn.pred)
+```
+
+```
+##              nn.pred
+##               insurance noinsurance
+##   noinsurance       165        1490
+##   insurance          20          72
+```
+
+
 
 Modeling Iter. 3
 ----------------
@@ -776,7 +865,7 @@ Now that we have the algorithms working due to oversampling, we're running into 
 MHHUUR   PBRAND   PPERSAUT STYPE
 
 ```r
-dt_cols <- c("CARAVAN", "MHHUUR", "PBRAND", "PPERSAUT", "STYPE")
+dt_cols <- c("CARAVAN", "MHHUUR", "PPERSAUT", "STYPE")
 train.dt <- train.over[, dt_cols]
 test.dt <- test[, dt_cols]
 ```
@@ -788,29 +877,22 @@ test.dt <- test[, dt_cols]
 lrm <- glm(CARAVAN ~ ., train.dt, family = binomial)
 ```
 
-```
-## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
-```
-
 No more "algorithm did not converge" warning.
 
 ```r
 lrm.pred <- predict(lrm, test.dt)
-```
-
-```
-## Error: factor PBRAND has new levels f 10000-19999
-```
-
-```r
+lrm.pred <- 1 * (lrm.pred >= 0.5)
 table(lrm.pred, test$CARAVAN)
 ```
 
 ```
-## Error: object 'lrm.pred' not found
+##         
+## lrm.pred noinsurance insurance
+##        0        1277        43
+##        1         378        49
 ```
 
-Nope, not even working.
+Working, but not that great.
 
 ### Decision Tree
 
@@ -825,21 +907,20 @@ printcp(dt)
 ## rpart(formula = CARAVAN ~ ., data = train.dt, method = "class")
 ## 
 ## Variables actually used in tree construction:
-## [1] MHHUUR   PBRAND   PPERSAUT STYPE   
+## [1] MHHUUR   PPERSAUT STYPE   
 ## 
 ## Root node error: 3819/7659 = 0.5
 ## 
 ## n= 7659 
 ## 
 ##      CP nsplit rel error xerror  xstd
-## 1 0.371      0      1.00   1.02 0.011
+## 1 0.371      0      1.00   1.03 0.011
 ## 2 0.042      1      0.63   0.63 0.011
-## 3 0.012      2      0.59   0.59 0.010
-## 4 0.011      5      0.55   0.56 0.010
-## 5 0.010      7      0.53   0.54 0.010
+## 3 0.012      2      0.59   0.61 0.011
+## 4 0.010      5      0.55   0.59 0.010
 ```
 
-Much better this time. 4 variables were used in tree construction this time.
+Not surprisingly, the DT still works and uses all four of the variables we selected out.
 
 ```r
 dt.pred <- predict(dt, test, type = "class")
@@ -849,24 +930,26 @@ table(dt.pred, test$CARAVAN)
 ```
 ##              
 ## dt.pred       noinsurance insurance
-##   noinsurance        1006        21
-##   insurance           649        71
+##   noinsurance        1039        26
+##   insurance           616        66
 ```
 
-Unfortunately the results still aren't the best. The false negative rate is huge 525/1655 and the false positive rate is 28/92. 
+And also not too surprisingly, the results are a bit worse give we removed a ton of information. The false negative rate is now a huge 649/1655 and the false positive rate is 21/92. 
 
 ### Random Forest
 
 ```r
-train.dt$STYPE <- as.numeric(train.dt$STYPE)
-rf <- randomForest(CARAVAN ~ ., train.dt)
+train.temp <- train.dt
+train.temp$STYPE <- as.numeric(train.temp$STYPE)
+rf <- randomForest(CARAVAN ~ ., train.temp)
 ```
 
-These in-sample results are great! This time the forest was able to correctly identify all of the "insurance" observations (though they are oversampled).
+
 
 ```r
-test.dt$STYPE <- as.numeric(test.dt$STYPE)
-rf.pred <- predict(rf, test.dt)
+test.temp <- test.dt
+test.temp$STYPE <- as.numeric(test.temp$STYPE)
+rf.pred <- predict(rf, test.temp)
 ```
 
 ```
@@ -878,7 +961,17 @@ table(test$CARAVAN, rf.pred)
 ```
 
 ```
-## Error: object 'rf.pred' not found
+##              rf.pred
+##               noinsurance insurance
+##   noinsurance        1573        82
+##   insurance            83         9
 ```
 
-When looking at the test set, unfortunately, the accuracy decreases drastically...
+
+### Summary
+It looks like doing a feature selection through decision tree EDA just isn't that great. Let's explore some other FS techniques.
+
+
+Modeling Iter. 4
+----------------
+

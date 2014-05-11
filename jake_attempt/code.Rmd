@@ -238,7 +238,7 @@ Now that we have the algorithms working due to oversampling, we're running into 
 ### Feature selection via DT EDA
 MHHUUR   PBRAND   PPERSAUT STYPE
 ```{r}
-dt_cols <- c('CARAVAN', 'MHHUUR', 'PBRAND', 'PPERSAUT', 'STYPE')
+dt_cols <- c('CARAVAN', 'MHHUUR', 'PPERSAUT', 'STYPE')
 train.dt <- train.over[, dt_cols]
 test.dt <- test[, dt_cols]
 ```
@@ -250,9 +250,10 @@ lrm <- glm(CARAVAN~., train.dt, family=binomial)
 No more "algorithm did not converge" warning.
 ```{r}
 lrm.pred <- predict(lrm, test.dt)
+lrm.pred <- 1*(lrm.pred >= 0.5)
 table(lrm.pred, test$CARAVAN)
 ```
-Nope, not even working.
+Working, but not that great.
 
 ### Decision Tree
 ```{r}
@@ -268,12 +269,22 @@ And also not too surprisingly, the results are a bit worse give we removed a ton
 
 ### Random Forest
 ```{r}
-train.dt$STYPE <- as.numeric(train.dt$STYPE)
-rf <- randomForest(CARAVAN~., train.dt)
+train.temp <- train.dt
+train.temp$STYPE <- as.numeric(train.temp$STYPE)
+rf <- randomForest(CARAVAN~., train.temp)
 ```
 
 ```{r}
-test.dt$STYPE <- as.numeric(test.dt$STYPE)
-rf.pred <- predict(rf, test.dt)
+test.temp <- test.dt
+test.temp$STYPE <- as.numeric(test.temp$STYPE)
+rf.pred <- predict(rf, test.temp)
 table(test$CARAVAN, rf.pred)
 ```
+
+### Summary
+It looks like doing a feature selection through decision tree EDA just isn't that great. Let's explore some other FS techniques.
+
+
+Modeling Iter. 4
+----------------
+
