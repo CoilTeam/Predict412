@@ -1,3 +1,39 @@
+**Setup**
+
+```r
+library(kernlab)
+# library(car)
+library(ggplot2)
+library(corrgram)
+```
+
+```
+## Loading required package: seriation
+```
+
+```r
+library(vcd)
+```
+
+```
+## Loading required package: grid
+```
+
+```r
+library(rpart)
+library(randomForest)
+```
+
+```
+## randomForest 4.6-7
+## Type rfNews() to see new features/changes/bug fixes.
+```
+
+```r
+library(e1071)
+```
+
+
 1. Introduction
 ============
 
@@ -9,7 +45,6 @@
 ### 2.1.1 Import Dataset
 
 ```r
-library(kernlab)
 data(ticdata)
 # raw <- read.csv('../ticdata2000.csv')
 data <- ticdata[1:5822, ]
@@ -209,16 +244,6 @@ head(dc)
 
 
 
-```r
-set.seed(123)
-mask <- sample(5822, 4075)
-
-train <- dc[mask, ]
-test <- dc[-mask, ]
-```
-
-
-
 2.2 Data Exploration
 ----------------
 ### 2.2.1 Summary EDA
@@ -394,47 +419,22 @@ summary(dc)
 ### 2.2.2 Univariate EDA
 
 ### Multivariate EDA: Explanatory vs Reponse
-
-```r
-require(ggplot2)
-```
-
-```
-## Loading required package: ggplot2
-```
-
-```r
-for (i in 1:85) {
-    p <- ggplot(dc, aes(x = dc[, i], fill = CARAVAN)) + geom_bar()
-    print(p)
+#### Bar Plots
+```{.r, fig.width=4, fig.height=3}
+for(i in 1:85){
+  p <- ggplot(dc, aes(x=dc[,i], fill=CARAVAN)) +
+    geom_bar()
+  print(p)
 }
 ```
 
-![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-51.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-52.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-53.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-54.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-55.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-56.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-57.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-58.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-59.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-510.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-511.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-512.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-513.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-514.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-515.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-516.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-517.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-518.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-519.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-520.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-521.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-522.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-523.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-524.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-525.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-526.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-527.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-528.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-529.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-530.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-531.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-532.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-533.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-534.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-535.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-536.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-537.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-538.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-539.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-540.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-541.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-542.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-543.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-544.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-545.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-546.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-547.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-548.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-549.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-550.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-551.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-552.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-553.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-554.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-555.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-556.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-557.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-558.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-559.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-560.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-561.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-562.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-563.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-564.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-565.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-566.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-567.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-568.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-569.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-570.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-571.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-572.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-573.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-574.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-575.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-576.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-577.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-578.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-579.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-580.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-581.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-582.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-583.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-584.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-585.png) 
-
-
-### Corrgram
+#### Corrgram
+_Works with continuous variables_
 ```{#r}
-require(corrgram)
 corrgram(dc[1:5,])
 ```
-### Association Plot
-
-```r
-require(vcd)
-```
-
-```
-## Loading required package: vcd
-```
-
-```
-## Warning: package 'vcd' was built under R version 3.0.3
-```
-
-```
-## Loading required package: grid
-```
+#### Association Plot
+_Works with categorical variables_
 
 ```r
 for (i in 1:85) {
@@ -443,18 +443,10 @@ for (i in 1:85) {
 }
 ```
 
-![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-61.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-62.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-63.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-64.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-65.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-66.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-67.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-68.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-69.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-610.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-611.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-612.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-613.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-614.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-615.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-616.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-617.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-618.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-619.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-620.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-621.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-622.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-623.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-624.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-625.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-626.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-627.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-628.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-629.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-630.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-631.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-632.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-633.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-634.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-635.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-636.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-637.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-638.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-639.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-640.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-641.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-642.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-643.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-644.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-645.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-646.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-647.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-648.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-649.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-650.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-651.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-652.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-653.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-654.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-655.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-656.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-657.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-658.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-659.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-660.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-661.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-662.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-663.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-664.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-665.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-666.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-667.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-668.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-669.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-670.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-671.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-672.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-673.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-674.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-675.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-676.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-677.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-678.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-679.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-680.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-681.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-682.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-683.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-684.png) ![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-685.png) 
+![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-51.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-52.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-53.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-54.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-55.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-56.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-57.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-58.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-59.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-510.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-511.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-512.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-513.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-514.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-515.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-516.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-517.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-518.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-519.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-520.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-521.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-522.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-523.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-524.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-525.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-526.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-527.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-528.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-529.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-530.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-531.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-532.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-533.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-534.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-535.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-536.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-537.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-538.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-539.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-540.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-541.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-542.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-543.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-544.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-545.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-546.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-547.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-548.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-549.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-550.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-551.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-552.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-553.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-554.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-555.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-556.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-557.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-558.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-559.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-560.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-561.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-562.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-563.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-564.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-565.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-566.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-567.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-568.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-569.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-570.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-571.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-572.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-573.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-574.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-575.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-576.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-577.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-578.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-579.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-580.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-581.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-582.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-583.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-584.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-585.png) 
 
 
 ### Decision Tree EDA
-
-```r
-require(rpart)
-```
-
-```
-## Loading required package: rpart
-```
 
 ```r
 dt <- rpart(CARAVAN ~ ., dc)
@@ -500,7 +492,7 @@ printcp(dt)
 plotcp(dt)
 ```
 
-![plot of chunk unnamed-chunk-7](figure/unnamed-chunk-7.png) 
+![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6.png) 
 
 ```r
 
@@ -519,34 +511,30 @@ text(dt, use.n = TRUE, all = TRUE, cex = 0.8)
 ## Error: fit is not a tree, just a root
 ```
 
-It looks like the tree cannot differentiate between 
+It looks like the tree cannot differentiate between the two response classes atm. Will need some way to amplify the signal, perhaps through oversampling.
 
 2.3 Data Selection
 ------------------
 ### PCA
+_Doesn't work with categorical data_
 ```{#r}
 pca <- princomp(data[1:100,1:5])
 ```
 
 
-2.4 Modeling
-------------
+2.4 Modeling Iter. 1
+--------------------
+We begin by running the data through multiple algorithms on their respective default settings. This allows us to gather initial information on the performance of the algorithms as well as the dataset itself.
 ### Split Test/Train
-```{#r}
-data$set <- 'Train'
-rand <- sample(1:10, nrow(data), replace=T)
-data[rand>8, 'set'] <- 'Test'
+
+```r
+set.seed(123)
+mask <- sample(5822, 4075)
+
+train <- dc[mask, ]
+test <- dc[-mask, ]
 ```
-Let's look at the breakdown of the response variable between the two sets to make sure there's good coverage in both:
-```{#r}
-table(data$set, data$caravan)
-```
-We see that the training set is sufficiently large, while the test set has a good number of observations where _caravan_ = 1. Let's split these into their own sets for easier usage.
-```{#r}
-train <- data[data$set=='Train',-87]
-test.x <- data[data$set=='Test',1:85]
-test.y <- data[data$set=='Test',86]
-```
+
 
 ### Define Formula
 We have to define the formula that we're modeling upon first. We can do this by joining the column names together into a string, and then converting that string into the "formula" object.
@@ -561,22 +549,336 @@ print(f)
 ```
 
 ### Logistic Regression
-```{#r}
-lrm <- glm(f, train, family=binomial)
+
+```r
+lrm <- glm(CARAVAN ~ ., train, family = binomial)
 ```
 
+```
+## Warning: glm.fit: algorithm did not converge
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+```
+
+As seen above, we get a few warnings, one of which informing us that the algorithm didn't converge.
+
 ### Decision Tree
-```{#r}
-require(rpart)
-dt <- rpart(f, data, method='class')
+
+```r
+dt <- rpart(CARAVAN ~ ., train, method = "class")
 printcp(dt)
 ```
 
+```
+## 
+## Classification tree:
+## rpart(formula = CARAVAN ~ ., data = train, method = "class")
+## 
+## Variables actually used in tree construction:
+## character(0)
+## 
+## Root node error: 256/4075 = 0.063
+## 
+## n= 4075 
+## 
+##   CP nsplit rel error xerror xstd
+## 1  0      0         1      0    0
+```
+
+No nodes were created and no variables were used...
+
 ### Random Forest
 
+```r
+rf <- randomForest(CARAVAN ~ ., train)
+```
 
+```
+## Error: Can not handle categorical predictors with more than 32 categories.
+```
 
+Error that it can't handle >32 categories. Convert and try with continuous data instead.
+
+```r
+train.numStype <- train
+train.numStype$STYPE <- as.numeric(train$STYPE)
+rf <- randomForest(CARAVAN ~ ., train.numStype)
+rf
+```
+
+```
+## 
+## Call:
+##  randomForest(formula = CARAVAN ~ ., data = train.numStype) 
+##                Type of random forest: classification
+##                      Number of trees: 500
+## No. of variables tried at each split: 9
+## 
+##         OOB estimate of  error rate: 7.41%
+## Confusion matrix:
+##             noinsurance insurance class.error
+## noinsurance        3769        50     0.01309
+## insurance           252         4     0.98438
+```
+
+It runs now, which is good. However, it only correctly identifies 3 "insurance" observations correctly.
 
 ### Naive Bayes
+_Unreliable due to independence requirement_
+
+```r
+nb <- naiveBayes(CARAVAN ~ ., train)
+```
 
 
+
+2.5 Modeling Iter. 2
+--------------------
+We discovered in iteration 1 that the ratio between the classes is just too large. The algorithms will simply settle on 0. We will need to oversample this dataset to even out the obervations between both classes. This way the algorithms will ignore the difference in sample size between the 2.
+### Oversample
+
+```r
+train.over <- train
+table(train.over$CARAVAN)
+```
+
+```
+## 
+## noinsurance   insurance 
+##        3819         256
+```
+
+Before oversampling, there are 256 "insurance" and 3819 "noinsurance". To make them roughly the same we will repeat the "insurance" observations 14 times.
+
+```r
+temp <- train.over[grep("^insurance", train.over$CARAVAN), ]
+for (i in 1:14) {
+    train.over <- rbind(train.over, temp)
+}
+table(train.over$CARAVAN)
+```
+
+```
+## 
+## noinsurance   insurance 
+##        3819        3840
+```
+
+There are now 3840 "insurance" and 3819 "noinsurance". Let's try some of the same models again.
+
+### Logistic Regression
+
+```r
+lrm <- glm(CARAVAN ~ ., train.over, family = binomial)
+```
+
+```
+## Warning: glm.fit: algorithm did not converge
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+```
+
+Still the same errors as before: "algorithm did not converge"
+
+```r
+lrm.pred <- predict(lrm, test, type = "response")
+```
+
+```
+## Error: factor MAANTHUI has new levels 8
+```
+
+```r
+table(lrm.pred, test$CARAVAN)
+```
+
+```
+## Error: object 'lrm.pred' not found
+```
+
+Nope, not even working.
+
+### Decision Tree
+
+```r
+dt <- rpart(CARAVAN ~ ., train.over, method = "class")
+printcp(dt)
+```
+
+```
+## 
+## Classification tree:
+## rpart(formula = CARAVAN ~ ., data = train.over, method = "class")
+## 
+## Variables actually used in tree construction:
+## [1] MHHUUR   PBRAND   PPERSAUT STYPE   
+## 
+## Root node error: 3819/7659 = 0.5
+## 
+## n= 7659 
+## 
+##      CP nsplit rel error xerror  xstd
+## 1 0.371      0      1.00   1.02 0.011
+## 2 0.042      1      0.63   0.63 0.011
+## 3 0.011      2      0.59   0.58 0.010
+## 4 0.010      4      0.56   0.55 0.010
+```
+
+Much better this time. 4 variables were used in tree construction this time.
+
+```r
+dt.pred <- predict(dt, test, type = "class")
+table(dt.pred, test$CARAVAN)
+```
+
+```
+##              
+## dt.pred       noinsurance insurance
+##   noinsurance        1130        28
+##   insurance           525        64
+```
+
+Unfortunately the results still aren't the best. The false negative rate is huge 525/1655 and the false positive rate is 28/92. 
+
+### Random Forest
+
+```r
+rf <- randomForest(CARAVAN ~ ., train.over)
+```
+
+```
+## Error: Can not handle categorical predictors with more than 32 categories.
+```
+
+These in-sample results are great! This time the forest was able to correctly identify all of the "insurance" observations (though they are oversampled).
+
+```r
+rf.pred <- predict(rf, test)
+```
+
+```
+## Error: New factor levels not present in the training data
+```
+
+```r
+table(test$CARAVAN, rf.pred)
+```
+
+```
+## Error: object 'rf.pred' not found
+```
+
+When looking at the test set, unfortunately, the accuracy decreases drastically...
+
+Modeling Iter. 3
+----------------
+Now that we have the algorithms working due to oversampling, we're running into actual modeling problems. The primary issue we're observing is the large false positive and false negative rates.
+
+### Feature selection via DT EDA
+MHHUUR   PBRAND   PPERSAUT STYPE
+
+```r
+dt_cols <- c("CARAVAN", "MHHUUR", "PBRAND", "PPERSAUT", "STYPE")
+train.dt <- train.over[, dt_cols]
+test.dt <- test[, dt_cols]
+```
+
+
+### Logistic Regression
+
+```r
+lrm <- glm(CARAVAN ~ ., train.dt, family = binomial)
+```
+
+```
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+```
+
+No more "algorithm did not converge" warning.
+
+```r
+lrm.pred <- predict(lrm, test.dt)
+```
+
+```
+## Error: factor PBRAND has new levels f 10000-19999
+```
+
+```r
+table(lrm.pred, test$CARAVAN)
+```
+
+```
+## Error: object 'lrm.pred' not found
+```
+
+Nope, not even working.
+
+### Decision Tree
+
+```r
+dt <- rpart(CARAVAN ~ ., train.dt, method = "class")
+printcp(dt)
+```
+
+```
+## 
+## Classification tree:
+## rpart(formula = CARAVAN ~ ., data = train.dt, method = "class")
+## 
+## Variables actually used in tree construction:
+## [1] MHHUUR   PBRAND   PPERSAUT STYPE   
+## 
+## Root node error: 3819/7659 = 0.5
+## 
+## n= 7659 
+## 
+##      CP nsplit rel error xerror  xstd
+## 1 0.371      0      1.00   1.02 0.011
+## 2 0.042      1      0.63   0.63 0.011
+## 3 0.012      2      0.59   0.59 0.010
+## 4 0.011      5      0.55   0.56 0.010
+## 5 0.010      7      0.53   0.54 0.010
+```
+
+Much better this time. 4 variables were used in tree construction this time.
+
+```r
+dt.pred <- predict(dt, test, type = "class")
+table(dt.pred, test$CARAVAN)
+```
+
+```
+##              
+## dt.pred       noinsurance insurance
+##   noinsurance        1006        21
+##   insurance           649        71
+```
+
+Unfortunately the results still aren't the best. The false negative rate is huge 525/1655 and the false positive rate is 28/92. 
+
+### Random Forest
+
+```r
+train.dt$STYPE <- as.numeric(train.dt$STYPE)
+rf <- randomForest(CARAVAN ~ ., train.dt)
+```
+
+These in-sample results are great! This time the forest was able to correctly identify all of the "insurance" observations (though they are oversampled).
+
+```r
+test.dt$STYPE <- as.numeric(test.dt$STYPE)
+rf.pred <- predict(rf, test.dt)
+```
+
+```
+## Error: New factor levels not present in the training data
+```
+
+```r
+table(test$CARAVAN, rf.pred)
+```
+
+```
+## Error: object 'rf.pred' not found
+```
+
+When looking at the test set, unfortunately, the accuracy decreases drastically...

@@ -1,3 +1,16 @@
+**Setup**
+```{r}
+library(kernlab)
+#library(car)
+library(ggplot2)
+library(corrgram)
+library(vcd)
+library(rpart)
+library(randomForest)
+library(e1071)
+library(nnet)
+```
+
 1. Introduction
 ============
 
@@ -8,7 +21,6 @@
 ----------------
 ### 2.1.1 Import Dataset
 ```{r}
-library(kernlab)
 data(ticdata)
 #raw <- read.csv('../ticdata2000.csv')
 data <- ticdata[1:5822,]
@@ -23,14 +35,6 @@ str(dc)
 head(dc)
 ```
 
-```{r}
-set.seed(123)
-mask <- sample(5822,4075)
-
-train <- dc[mask,]
-test <- dc[-mask,]
-```
-
 
 2.2 Data Exploration
 ----------------
@@ -42,8 +46,8 @@ summary(dc)
 ### 2.2.2 Univariate EDA
 
 ### Multivariate EDA: Explanatory vs Reponse
-```{r, fig.width=4, fig.height=3}
-require(ggplot2)
+#### Bar Plots
+```{.r, fig.width=4, fig.height=3}
 for(i in 1:85){
   p <- ggplot(dc, aes(x=dc[,i], fill=CARAVAN)) +
     geom_bar()
@@ -51,14 +55,14 @@ for(i in 1:85){
 }
 ```
 
-### Corrgram
+#### Corrgram
+_Works with continuous variables_
 ```{#r}
-require(corrgram)
 corrgram(dc[1:5,])
 ```
-### Association Plot
+#### Association Plot
+_Works with categorical variables_
 ```{r, fig.width=4, fig.height=4}
-require(vcd)
 for(i in 1:85){
   t <- table(dc[,c(i, 86)])
   assoc(t, shade=T)
@@ -67,7 +71,6 @@ for(i in 1:85){
 
 ### Decision Tree EDA
 ```{r, fig.width=10, fig.height=10}
-require(rpart)
 dt <- rpart(CARAVAN~., dc)
 
 summary(dt)
@@ -77,33 +80,27 @@ plotcp(dt)
 plot(dt, uniform=TRUE, main="Classification Tree for Caravan")
 text(dt, use.n=TRUE, all=TRUE, cex=0.8)
 ```
-It looks like the tree cannot differentiate between 
+It looks like the tree cannot differentiate between the two response classes atm. Will need some way to amplify the signal, perhaps through oversampling.
 
 2.3 Data Selection
 ------------------
 ### PCA
+_Doesn't work with categorical data_
 ```{#r}
 pca <- princomp(data[1:100,1:5])
 ```
 
 
-2.4 Modeling
-------------
+2.4 Modeling Iter. 1
+--------------------
+We begin by running the data through multiple algorithms on their respective default settings. This allows us to gather initial information on the performance of the algorithms as well as the dataset itself.
 ### Split Test/Train
-```{#r}
-data$set <- 'Train'
-rand <- sample(1:10, nrow(data), replace=T)
-data[rand>8, 'set'] <- 'Test'
-```
-Let's look at the breakdown of the response variable between the two sets to make sure there's good coverage in both:
-```{#r}
-table(data$set, data$caravan)
-```
-We see that the training set is sufficiently large, while the test set has a good number of observations where _caravan_ = 1. Let's split these into their own sets for easier usage.
-```{#r}
-train <- data[data$set=='Train',-87]
-test.x <- data[data$set=='Test',1:85]
-test.y <- data[data$set=='Test',86]
+```{r}
+set.seed(123)
+mask <- sample(5822,4075)
+
+train <- dc[mask,]
+test <- dc[-mask,]
 ```
 
 ### Define Formula
@@ -119,24 +116,164 @@ print(f)
 ```
 
 ### Logistic Regression
-```{#r}
-lrm <- glm(f, train, family=binomial)
+```{r}
+lrm <- glm(CARAVAN~., train, family=binomial)
 ```
+As seen above, we get a few warnings, one of which informing us that the algorithm didn't converge.
 
 ### Decision Tree
-```{#r}
-require(rpart)
-dt <- rpart(f, data, method='class')
+```{r}
+dt <- rpart(CARAVAN~., train, method='class')
 printcp(dt)
 ```
+No nodes were created and no variables were used...
 
 ### Random Forest
 ```{r}
+rf <- randomForest(CARAVAN~., train)
+```
+Error that it can't handle >32 categories. Convert and try with continuous data instead.
+```{r}
+train.temp <- train
+train.temp$STYPE <- as.numeric(train.temp$STYPE)
+rf <- randomForest(CARAVAN~., train.temp)
+rf
+```
+It runs now, which is good. However, it only correctly identifies 3 "insurance" observations correctly (in-sample). Let's try out-of-sample instead and see how the model fares.
+```{r}
+test.temp <- test
+test.temp$STYPE <- as.numeric(test.temp$STYPE)
+rf.pred <- predict(rf, test.temp)
+table(test$CARAVAN, rf.pred)
+```
+Unfortunately the model doesn't do well against the test data either. 
 
+### Naive Bayes
+_Unreliable due to independence requirement. Skipping._
+```{r}
+nb <- naiveBayes(CARAVAN~., train)
+```
+
+### Neural Net
+```{r}
+nn <- nnet(CARAVAN~., train, size=1)
+```
+```{r}
+nn.pred <- predict(nn, test, type='class')
+table(test$CARAVAN, nn.pred)
+```
+The neural has predicted all the test observations to be 'noinsurance'. This is probably due to the difference in class counts in the observations.
+
+
+2.5 Modeling Iter. 2
+--------------------
+We discovered in iteration 1 that the ratio between the classes is just too large. The algorithms will simply settle on 0. We will need to oversample this dataset to even out the obervations between both classes. This way the algorithms will ignore the difference in sample size between the 2.
+### Oversample
+```{r}
+train.over <- train
+table(train.over$CARAVAN)
+```
+Before oversampling, there are 256 "insurance" and 3819 "noinsurance". To make them roughly the same we will repeat the "insurance" observations 14 times.
+```{r}
+temp <- train.over[grep('^insurance', train.over$CARAVAN),]
+for(i in 1:14){
+  train.over <- rbind(train.over, temp)
+}
+table(train.over$CARAVAN)
+```
+There are now 3840 "insurance" and 3819 "noinsurance". Let's try some of the same models again.
+
+### Logistic Regression
+```{r}
+lrm <- glm(CARAVAN~., train.over, family=binomial)
+```
+Still the same errors as before: "algorithm did not converge"
+```{r}
+lrm.pred <- predict(lrm, test, type='response')
+table(lrm.pred, test$CARAVAN)
+```
+Nope, not even working.
+
+### Decision Tree
+```{r}
+dt <- rpart(CARAVAN~., train.over, method='class')
+printcp(dt)
+```
+Much better this time. 4 variables were used in tree construction this time.
+```{r}
+dt.pred <- predict(dt, test, type='class')
+table(dt.pred, test$CARAVAN)
+```
+Unfortunately the results still aren't the best. The false negative rate is huge 525/1655 and the false positive rate is 28/92. 
+
+### Random Forest
+```{r}
+train.temp <- train.over
+train.temp$STYPE <- as.numeric(train.temp$STYPE)
+rf <- randomForest(CARAVAN~., train.temp)
+```
+These in-sample results are great! This time the forest was able to correctly identify all of the "insurance" observations (though they are oversampled).
+```{r}
+test.temp <- test
+test.temp$STYPE <- as.numeric(test.temp$STYPE)
+rf.pred <- predict(rf, test.temp)
+table(test$CARAVAN, rf.pred)
+```
+When looking at the test set, unfortunately, the out-of-samply accuracy decreases drastically...
+
+### Neural Net
+```{r}
+nn <- nnet(CARAVAN~., train.over, size=1)
+```
+```{r}
+nn.pred <- predict(nn, test, type='class')
+table(test$CARAVAN, nn.pred)
 ```
 
 
-### Naive Bayes
-```{r}
+Modeling Iter. 3
+----------------
+Now that we have the algorithms working due to oversampling, we're running into actual modeling problems. The primary issue we're observing is the large false positive and false negative rates.
 
+### Feature selection via DT EDA
+MHHUUR   PBRAND   PPERSAUT STYPE
+```{r}
+dt_cols <- c('CARAVAN', 'MHHUUR', 'PBRAND', 'PPERSAUT', 'STYPE')
+train.dt <- train.over[, dt_cols]
+test.dt <- test[, dt_cols]
+```
+
+### Logistic Regression
+```{r}
+lrm <- glm(CARAVAN~., train.dt, family=binomial)
+```
+No more "algorithm did not converge" warning.
+```{r}
+lrm.pred <- predict(lrm, test.dt)
+table(lrm.pred, test$CARAVAN)
+```
+Nope, not even working.
+
+### Decision Tree
+```{r}
+dt <- rpart(CARAVAN~., train.dt, method='class')
+printcp(dt)
+```
+Not surprisingly, the DT still works and uses all four of the variables we selected out.
+```{r}
+dt.pred <- predict(dt, test, type='class')
+table(dt.pred, test$CARAVAN)
+```
+And also not too surprisingly, the results are a bit worse give we removed a ton of information. The false negative rate is now a huge 649/1655 and the false positive rate is 21/92. 
+
+### Random Forest
+```{r}
+train.dt$STYPE <- as.numeric(train.dt$STYPE)
+rf <- randomForest(CARAVAN~., train.dt)
+```
+
+```{r}
+test.dt$STYPE <- as.numeric(test.dt$STYPE)
+rf.pred <- predict(rf, test.dt)
+table(test$CARAVAN, rf.pred)
 ```
