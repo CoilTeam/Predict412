@@ -50,6 +50,12 @@ table(tic.test$CARAVAN)
 # after stratification, the test set is 2 rows longer than the strict 70% calc, and has 105 positive responses rather than the raw calc of 104, which is fine:
 nrow(tic.train)
 nrow(tic.test)
+# further elaboration on stratification 
+trn.baserate <- (nrow(tic.train[tic.train$CARAVAN=="insurance",]))/nrow(tic.train)
+tst.baserate <- (nrow(tic.test[tic.test$CARAVAN=="insurance",]))/nrow(tic.test)
+trn.br <- round(trn.baserate, digits=2)
+test.br <- round(tst.baserate, digits=2)
+trn.br==test.br 
 # Many algorithms won't do well if the data is presented one class then the other in the train set
 tic.train   <-  tic.train [sample(nrow(tic.train)),]
 ###################################################################################
@@ -126,11 +132,6 @@ bal.xtrain  <- as.data.frame(balancedData$X)
 head(bal.xtrain)
 bal.ytrain <- bal.tic.train$CARAVAN
 summary(bal.tic.train)
-###################################################################################
-# save final results
-#combinedresults <- combinedresults[-1,]
-#combinedresults
-write.xlsx2(combinedresults,"D:/R Working Directory/Predict412/teamproject/results.xlsx",col.names=TRUE, row.names=FALSE)
 ###################################################################################
 # tree model
 library(rpart)
