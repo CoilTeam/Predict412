@@ -183,6 +183,16 @@ head(predictions)
 results1  <- evaluate(methodname, predictions=predictions, combinedresults)
 combinedresults  <- rbind(combinedresults, results1)
 combinedresults
+
+# test NB on unbalanced data:
+BT <- "N"
+methodname  <- "naive bayes"
+tic.nb <- naiveBayes(xtrain, ytrain)
+predictions <- predict(tic.nb, newdata=tic.test[,-86], type='raw')[,2]
+head(predictions)
+results1  <- evaluate(methodname, predictions=predictions, combinedresults)
+combinedresults  <- rbind(combinedresults, results1)
+combinedresults
 ###################################################################################
 # save final results
 #combinedresults <- combinedresults[-1,]
