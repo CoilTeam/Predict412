@@ -50,31 +50,8 @@ table(tic.test$CARAVAN)
 # after stratification, the test set is 2 rows longer than the strict 70% calc, and has 105 positive responses rather than the raw calc of 104, which is fine:
 nrow(tic.train)
 nrow(tic.test)
-# further elaboration on stratification 
-trn.baserate <- (nrow(tic.train[tic.train$CARAVAN=="insurance",]))/nrow(tic.train)
-tst.baserate <- (nrow(tic.test[tic.test$CARAVAN=="insurance",]))/nrow(tic.test)
-trn.br <- round(trn.baserate, digits=2)
-test.br <- round(tst.baserate, digits=2)
-trn.br==test.br 
 # Many algorithms won't do well if the data is presented one class then the other in the train set
 tic.train   <-  tic.train [sample(nrow(tic.train)),]
-###################################################################################
-# Scoring 
-# CoIL asked for the 800 test observations with highest probability of being positive responses
-# The final holdout set has 4000 rows, so 800 is the top 20%
-# We want to do the same thing in our test set (to identify our best model)
-# our test set has 1748 rows
-testsetsize <- nrow(tic.test)
-testsetsize
-# we want to select our top 20%, so this is 350 predictions:
-topquintile_test <- round((testsetsize*.2), digits=0)
-topquintile_test
-# In any random sample of 350 observations from the data, there should be 20 or 21 positive responses:
-baserate*topquintile_test
-# this is very close to 21, so let's round it up
-Baseline <- 21
-# the best model is the one that achieves the highest lift over 21 in the top 350
-# (350 with highest predicted Pr(yhat=1|X))
 ###################################################################################
 # break out response and predictors for those methods that need them separated
 ytrain <- ifelse(tic.train$CARAVAN=="insurance",1,0)
@@ -104,20 +81,6 @@ colnames(combinedresults)  <- c("Method_Name", "Test_Set_True_Positives", "TP_Id
 # kludge
 combinedresults <- combinedresults[-1,]
 ###################################################################################
-# set classification thresholds
-threshold  <- seq(.1, 0.9, 0.1)
-###################################################################################
-# create function to evaluate results
-evaluate  <- function(methodname, predictions, combinedresults){
-  lift <- as.data.frame(cbind(ytest, predictions))
-  colnames(lift) <- c("y", "yhat")
-  order <- lift[order(lift$yhat,decreasing=TRUE),]
-  liftcut <- order[1:350,]
-  TP <- sum(liftcut$y)
-  Lift  <- TP-Baseline 
-  results  <- as.vector(c(methodname, test_truepos, TP, Baseline, Lift, BT))
-}
-###################################################################################
 # balance train data
 library(unbalanced)
 #balance the dataset
@@ -132,6 +95,43 @@ bal.xtrain  <- as.data.frame(balancedData$X)
 head(bal.xtrain)
 bal.ytrain <- bal.tic.train$CARAVAN
 summary(bal.tic.train)
+###################################################################################
+# Scoring 
+# CoIL asked for the 800 test observations with highest probability of being positive responses
+# The final holdout set has 4000 rows, so 800 is the top 20%
+# We want to do the same thing in our test set (to identify our best model)
+# our test set has 1748 rows
+testsetsize <- nrow(tic.test)
+testsetsize
+# we want to select our top 20%, so this is 350 predictions:
+topquintile_test <- round((testsetsize*.2), digits=0)
+topquintile_test
+# In any random sample of 350 observations from the data, there should be 20 or 21 positive responses:
+baserate*topquintile_test
+# this is very close to 21, so let's round it up
+Baseline <- 21
+# the best model is the one that achieves the highest lift over 21 in the top 350
+# (350 with highest predicted Pr(yhat=1|X))
+###################################################################################
+# create function to evaluate results
+evaluate  <- function(methodname, predictions, combinedresults){
+  lift <- as.data.frame(cbind(ytest, predictions))
+  colnames(lift) <- c("y", "yhat")
+  order <- lift[order(lift$yhat,decreasing=TRUE),]
+  head(order)
+  liftcut <- order[1:350,]
+  TP <- sum(liftcut$y)
+  Lift  <- TP-Baseline 
+  results  <- as.vector(c(methodname, test_truepos, TP, Baseline, Lift, BT))
+}
+###################################################################################
+# set classification thresholds
+threshold  <- seq(.1, 0.9, 0.1)
+###################################################################################
+# save final results
+#combinedresults <- combinedresults[-1,]
+#combinedresults
+write.xlsx2(combinedresults,"D:/R Working Directory/Predict412/teamproject/results.xlsx",col.names=TRUE, row.names=FALSE)
 ###################################################################################
 # tree model
 library(rpart)
@@ -173,6 +173,17 @@ combinedresults  <- rbind(combinedresults, results1)
 combinedresults
 # same performance as glm
 ###################################################################################
+# naive bayes
+library(e1071)
+BT <- "Y"
+methodname  <- "naive bayes"
+tic.nb <- naiveBayes(bal.xtrain, bal.ytrain)
+predictions <- predict(tic.nb, newdata=tic.test[,-86], type='raw')[,2]
+head(predictions)
+results1  <- evaluate(methodname, predictions=predictions, combinedresults)
+combinedresults  <- rbind(combinedresults, results1)
+combinedresults
+###################################################################################
 # save final results
 #combinedresults <- combinedresults[-1,]
 #combinedresults
@@ -189,22 +200,6 @@ tic.ada <- ada(ticformula, data=bal.tic.train, type="discrete", loss="logistic")
 predictions <- predict(tic.ada, newdata=tic.test)
 table(actual=ytest, predicted=predictions)
 ###################################################################################
-# naive bayes
-library(e1071)
-# separated because for some reason the prediction format changes
-methodname  <- "naive bayes"
-BT <- "N"
-tic.nb <- naiveBayes(ticformula, data=tic.train)
-yhat<- predict(tic.nb, newdata=tic.test)
-predictions  <- ifelse(yhat=="insurance", 1, 0)
-table(actual=ytest, predicted=predictions)
-
-# NB performs better on the balanced train data:
-BT <- "Y"
-tic.nb <- naiveBayes(ticformula, data=bal.tic.train)
-predictions<- predict(tic.nb, newdata=tic.test)
-table(actual=ytest, predicted=predictions)
-####################################################################
 # bagging
 methodname  <- "bagging"
 BT <- "N"
@@ -224,7 +219,7 @@ combinedresults  <- rbind(combinedresults, results1)
 library(BayesTree)
 methodname  <- "bayes tree"
 BT <- "N"
-tic.bt  <- bart(xtrain, ytrain, tic.test[, -86])
+tic.bt  <- bart(bal.xtrain, bal.ytrain, tic.test[, -86])
 str(tic.bt)
 library(slam)
 predictions <- as.data.frame(col_means(tic.bt$yhat.test))
@@ -235,3 +230,9 @@ colnames(testpredsbt) <- "yhat"
 order <- testpredsbt[order(testpredsbt$yhat,decreasing=TRUE),]
 head(order)
 ###################################################################################
+
+
+
+
+
+
