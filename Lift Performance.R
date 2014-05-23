@@ -48,8 +48,10 @@ tic.test <- tic[!rownames(tic) %in% strata$ID_unit,]
 table(tic.train$CARAVAN)
 table(tic.test$CARAVAN)
 # after stratification, the test set is 2 rows longer than the strict 70% calc, and has 105 positive responses rather than the raw calc of 104, which is fine:
-nrow(tic.train)
-nrow(tic.test)
+trainsize <- nrow(tic.train)
+testsize <- nrow(tic.test)
+trainsize
+testsize
 # Many algorithms won't do well if the data is presented one class then the other in the train set
 tic.train   <-  tic.train [sample(nrow(tic.train)),]
 ###################################################################################
@@ -118,7 +120,6 @@ evaluate  <- function(methodname, predictions, combinedresults){
   lift <- as.data.frame(cbind(ytest, predictions))
   colnames(lift) <- c("y", "yhat")
   order <- lift[order(lift$yhat,decreasing=TRUE),]
-  head(order)
   liftcut <- order[1:350,]
   TP <- sum(liftcut$y)
   Lift  <- TP-Baseline 
@@ -193,6 +194,52 @@ head(predictions)
 results1  <- evaluate(methodname, predictions=predictions, combinedresults)
 combinedresults  <- rbind(combinedresults, results1)
 combinedresults
+
+# use T/F predictions for use with learning curves
+methodname  <- "naive bayes"
+BT <- "N"
+#set up matrix to hold results
+lcmat <- t(as.matrix(c(1,1)))
+colnames(lcmat) <- c("train_err", "test_err")
+lcmat <- lcmat[-1,]
+# set up vector of train set sizes
+trainfraction  <- seq(0.1,1,0.1)
+trainlength <- trunc(as.vector(trainsize*trainfraction))
+trainlength
+
+#iterate model over increasing sample size
+for(i in trainlength){  
+  tic.nb <- naiveBayes(ticformula, data=tic.train[1:i,])
+    yhat_train <- predict(tic.nb,tic.train[1:i,])
+    yhat_test <- predict(tic.nb, newdata=tic.test)
+    yhat_train<- ifelse(yhat_train=="insurance", 1, 0)
+    yhat_test <- ifelse(yhat_test=="insurance", 1, 0)
+    # train error
+    traincomb  <- as.data.frame(cbind(ytrain[1:i],yhat_train))
+    traincomb  <- within(traincomb, residual <- abs(ytrain[1:i]-yhat_train))
+    train_err <- round(sum(traincomb$residual)/nrow(traincomb), digits=4)
+  train_err
+    # test error
+    testcomb  <- as.data.frame(cbind(ytest,yhat_test))
+    testcomb  <- within(testcomb, residual <- abs(ytest-yhat_test))
+    test_err <- round(sum(testcomb$residual)/nrow(testcomb), digits=4)
+    results  <- as.vector(c(train_err, test_err))
+    lcmat <- as.data.frame(rbind(lcmat,results)) 
+}
+
+write.xlsx2(lcmat,"D:/R Working Directory/Predict412/teamproject/learningcurve.xlsx",col.names=TRUE, row.names=FALSE)
+
+# get the range for the x and y axis
+xrange <- range(trainlength)
+yrange <- range(c(0,lcmat$test_err))
+linetype <- c(1:2)
+plotchar <- seq(18,19,1)
+
+#plot the learning curve
+plot(xrange,yrange,xlab="Number of training examples",ylab="Error")
+lines(trainlength, lcmat$train_err, type="b", lwd=1.5, lty=linetype[1], col=colors[1], pch=plotchar[1]) 
+lines(trainlength, lcmat$test_err, type="b", lwd=1.5, lty=linetype[2], col=colors[2], pch=plotchar[2]) 
+legend(x=500, y=0.8, c("train", "test"), cex=0.8, col=colors, pch=plotchar, lty=linetype, title="Naive Bayes Learning Curve")
 ###################################################################################
 # save final results
 #combinedresults <- combinedresults[-1,]
@@ -240,9 +287,3 @@ colnames(testpredsbt) <- "yhat"
 order <- testpredsbt[order(testpredsbt$yhat,decreasing=TRUE),]
 head(order)
 ###################################################################################
-
-
-
-
-
-
