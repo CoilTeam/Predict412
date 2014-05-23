@@ -8,11 +8,23 @@ library(corrgram)
 ```
 
 ```
+## Warning: package 'corrgram' was built under R version 3.0.3
+```
+
+```
 ## Loading required package: seriation
+```
+
+```
+## Warning: package 'seriation' was built under R version 3.0.3
 ```
 
 ```r
 library(vcd)
+```
+
+```
+## Warning: package 'vcd' was built under R version 3.0.3
 ```
 
 ```
@@ -25,13 +37,28 @@ library(randomForest)
 ```
 
 ```
+## Warning: package 'randomForest' was built under R version 3.0.3
+```
+
+```
 ## randomForest 4.6-7
 ## Type rfNews() to see new features/changes/bug fixes.
 ```
 
 ```r
 library(e1071)
+```
+
+```
+## Warning: package 'e1071' was built under R version 3.0.3
+```
+
+```r
 library(nnet)
+```
+
+```
+## Warning: package 'nnet' was built under R version 3.0.3
 ```
 
 
@@ -436,16 +463,13 @@ corrgram(dc[1:5,])
 ```
 #### Association Plot
 _Works with categorical variables_
-
-```r
-for (i in 1:85) {
-    t <- table(dc[, c(i, 86)])
-    assoc(t, shade = T)
+_Paused for the time being to increase speed_
+```{#r, fig.width=4, fig.height=4}
+for(i in 1:85){
+  t <- table(dc[,c(i, 86)])
+  assoc(t, shade=T)
 }
 ```
-
-![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-51.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-52.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-53.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-54.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-55.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-56.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-57.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-58.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-59.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-510.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-511.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-512.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-513.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-514.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-515.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-516.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-517.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-518.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-519.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-520.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-521.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-522.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-523.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-524.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-525.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-526.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-527.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-528.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-529.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-530.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-531.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-532.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-533.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-534.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-535.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-536.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-537.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-538.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-539.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-540.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-541.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-542.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-543.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-544.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-545.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-546.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-547.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-548.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-549.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-550.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-551.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-552.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-553.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-554.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-555.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-556.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-557.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-558.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-559.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-560.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-561.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-562.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-563.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-564.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-565.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-566.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-567.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-568.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-569.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-570.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-571.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-572.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-573.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-574.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-575.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-576.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-577.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-578.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-579.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-580.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-581.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-582.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-583.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-584.png) ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-585.png) 
-
 
 ### Decision Tree EDA
 
@@ -493,7 +517,7 @@ printcp(dt)
 plotcp(dt)
 ```
 
-![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6.png) 
+![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-5.png) 
 
 ```r
 
@@ -556,11 +580,20 @@ lrm <- glm(CARAVAN ~ ., train, family = binomial)
 ```
 
 ```
-## Warning: glm.fit: algorithm did not converge
 ## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
 ```
 
-As seen above, we get a few warnings, one of which informing us that the algorithm didn't converge.
+```r
+lrm.pred <- predict(lrm, test)
+```
+
+```
+## Error: factor MAANTHUI has new levels 8
+```
+
+As seen above, we get a few warnings, one of which informing us that the algorithm didn't converge. None of these warnings are fatal so we move on with the prediction phase to see what happens. However, we see here that for **some variables the classes used in training are not present in the test set**. Unfortunately this is a fatal error so we will have to move on.
+
+_We did convert some of variables to numeric but after a certain point this defeats the premise of the original conversion._
 
 ### Decision Tree
 
@@ -641,11 +674,9 @@ Unfortunately the model doesn't do well against the test data either.
 
 ### Naive Bayes
 _Unreliable due to independence requirement. Skipping._
-
-```r
-nb <- naiveBayes(CARAVAN ~ ., train)
+```{#r}
+nb <- naiveBayes(CARAVAN~., train)
 ```
-
 
 ### Neural Net
 
@@ -659,17 +690,16 @@ nn <- nnet(CARAVAN ~ ., train, size = 1)
 ## iter  10 value 923.506306
 ## iter  20 value 820.282895
 ## iter  30 value 762.422357
-## iter  40 value 734.048058
-## iter  50 value 722.150639
-## iter  60 value 709.831998
-## iter  70 value 701.967065
-## iter  80 value 691.574609
-## iter  90 value 683.487841
-## iter 100 value 678.832339
-## final  value 678.832339 
+## iter  40 value 734.047803
+## iter  50 value 722.150546
+## iter  60 value 709.833005
+## iter  70 value 701.236874
+## iter  80 value 691.925175
+## iter  90 value 682.522072
+## iter 100 value 677.202265
+## final  value 677.202265 
 ## stopped after 100 iterations
 ```
-
 
 ```r
 nn.pred <- predict(nn, test, type = "class")
@@ -684,6 +714,17 @@ table(test$CARAVAN, nn.pred)
 ```
 
 The neural has predicted all the test observations to be 'noinsurance'. This is probably due to the difference in class counts in the observations.
+
+### Summary
+None of the techniques used in this iteration provided satisfactory results. To sum up the findings:
+- Logistic Regression
+  - Returned warnings, plus the nature of the model requires the same dummy variables in both training and testing. This was not the case.
+- Decision Tree:
+  - Nodes weren't even created. Probably due to the large skew of the CARAVAN class.
+- Random Forest
+  - Horrible accuracy.
+- Neural Net
+  - Did not assign a single observation to 'insurance'. 
 
 
 2.5 Modeling Iter. 2
@@ -831,14 +872,14 @@ nn <- nnet(CARAVAN ~ ., train.over, size = 1)
 ## iter  10 value 4147.771607
 ## iter  20 value 3739.432462
 ## iter  30 value 3495.464751
-## iter  40 value 3329.975538
+## iter  40 value 3329.975539
 ## iter  50 value 3254.903831
-## iter  60 value 3211.337071
+## iter  60 value 3211.337072
 ## iter  70 value 3176.527704
-## iter  80 value 3148.131212
-## iter  90 value 3109.657133
-## iter 100 value 3107.635638
-## final  value 3107.635638 
+## iter  80 value 3148.131185
+## iter  90 value 3109.653196
+## iter 100 value 3107.632459
+## final  value 3107.632459 
 ## stopped after 100 iterations
 ```
 
@@ -851,7 +892,7 @@ table(test$CARAVAN, nn.pred)
 ```
 ##              nn.pred
 ##               insurance noinsurance
-##   noinsurance       165        1490
+##   noinsurance       166        1489
 ##   insurance          20          72
 ```
 
@@ -974,4 +1015,178 @@ It looks like doing a feature selection through decision tree EDA just isn't tha
 
 Modeling Iter. 4
 ----------------
+While oversampling did balance our dataset out enough to enable actual modeling, undersampling may be better due to the underlying methodology. Instead of producing fake date we will randomly sample the 'noinsurance' class to even out the balance.
+### Undersample
 
+```r
+train.over <- train
+table(train.over$CARAVAN)
+```
+
+```
+## 
+## noinsurance   insurance 
+##        3819         256
+```
+
+Before oversampling, there are 256 "insurance" and 3819 "noinsurance". To make them roughly the same we will repeat the "insurance" observations 14 times.
+
+```r
+temp <- train.over[grep("^insurance", train.over$CARAVAN), ]
+for (i in 1:14) {
+    train.over <- rbind(train.over, temp)
+}
+table(train.over$CARAVAN)
+```
+
+```
+## 
+## noinsurance   insurance 
+##        3819        3840
+```
+
+There are now 3840 "insurance" and 3819 "noinsurance". Let's try some of the same models again.
+
+### Logistic Regression
+
+```r
+lrm <- glm(CARAVAN ~ ., train.over, family = binomial)
+```
+
+```
+## Warning: glm.fit: algorithm did not converge
+## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+```
+
+Still the same errors as before: "algorithm did not converge"
+
+```r
+lrm.pred <- predict(lrm, test, type = "response")
+```
+
+```
+## Error: factor MAANTHUI has new levels 8
+```
+
+```r
+table(lrm.pred, test$CARAVAN)
+```
+
+```
+##         
+## lrm.pred noinsurance insurance
+##        0        1277        43
+##        1         378        49
+```
+
+Nope, not even working.
+
+### Decision Tree
+
+```r
+dt <- rpart(CARAVAN ~ ., train.over, method = "class")
+printcp(dt)
+```
+
+```
+## 
+## Classification tree:
+## rpart(formula = CARAVAN ~ ., data = train.over, method = "class")
+## 
+## Variables actually used in tree construction:
+## [1] MHHUUR   PBRAND   PPERSAUT STYPE   
+## 
+## Root node error: 3819/7659 = 0.5
+## 
+## n= 7659 
+## 
+##      CP nsplit rel error xerror  xstd
+## 1 0.371      0      1.00   1.02 0.011
+## 2 0.042      1      0.63   0.63 0.011
+## 3 0.011      2      0.59   0.59 0.010
+## 4 0.010      4      0.56   0.57 0.010
+```
+
+Much better this time. 4 variables were used in tree construction this time.
+
+```r
+dt.pred <- predict(dt, test, type = "class")
+table(dt.pred, test$CARAVAN)
+```
+
+```
+##              
+## dt.pred       noinsurance insurance
+##   noinsurance        1130        28
+##   insurance           525        64
+```
+
+Unfortunately the results still aren't the best. The false negative rate is huge 525/1655 and the false positive rate is 28/92. 
+
+### Random Forest
+
+```r
+train.temp <- train.over
+train.temp$STYPE <- as.numeric(train.temp$STYPE)
+rf <- randomForest(CARAVAN ~ ., train.temp)
+```
+
+These in-sample results are great! This time the forest was able to correctly identify all of the "insurance" observations (though they are oversampled).
+
+```r
+test.temp <- test
+test.temp$STYPE <- as.numeric(test.temp$STYPE)
+rf.pred <- predict(rf, test.temp)
+table(test$CARAVAN, rf.pred)
+```
+
+```
+##              rf.pred
+##               noinsurance insurance
+##   noinsurance        1572        83
+##   insurance            84         8
+```
+
+When looking at the test set, unfortunately, the out-of-samply accuracy decreases drastically...
+
+### Neural Net
+
+```r
+nn <- nnet(CARAVAN ~ ., train.over, size = 1)
+```
+
+```
+## # weights:  657
+## initial  value 5427.194377 
+## iter  10 value 4950.103929
+## iter  20 value 4758.362414
+## iter  30 value 4611.611315
+## iter  40 value 4418.542374
+## iter  50 value 4146.689057
+## iter  60 value 3800.865643
+## iter  70 value 3528.552587
+## iter  80 value 3214.190397
+## iter  90 value 3058.417840
+## iter 100 value 2890.844824
+## final  value 2890.844824 
+## stopped after 100 iterations
+```
+
+
+```r
+nn.pred <- predict(nn, test, type = "class")
+table(test$CARAVAN, nn.pred)
+```
+
+```
+##              nn.pred
+##               insurance noinsurance
+##   noinsurance       343        1312
+##   insurance          34          58
+```
+
+
+
+Modeling Iter. 5
+----------------
+Feature selection

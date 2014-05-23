@@ -62,7 +62,8 @@ corrgram(dc[1:5,])
 ```
 #### Association Plot
 _Works with categorical variables_
-```{r, fig.width=4, fig.height=4}
+_Paused for the time being to increase speed_
+```{#r, fig.width=4, fig.height=4}
 for(i in 1:85){
   t <- table(dc[,c(i, 86)])
   assoc(t, shade=T)
@@ -118,8 +119,11 @@ print(f)
 ### Logistic Regression
 ```{r}
 lrm <- glm(CARAVAN~., train, family=binomial)
+lrm.pred <- predict(lrm, test)
 ```
-As seen above, we get a few warnings, one of which informing us that the algorithm didn't converge.
+As seen above, we get a few warnings, one of which informing us that the algorithm didn't converge. None of these warnings are fatal so we move on with the prediction phase to see what happens. However, we see here that for **some variables the classes used in training are not present in the test set**. Unfortunately this is a fatal error so we will have to move on.
+
+_We did convert some of variables to numeric but after a certain point this defeats the premise of the original conversion._
 
 ### Decision Tree
 ```{r}
@@ -150,19 +154,28 @@ Unfortunately the model doesn't do well against the test data either.
 
 ### Naive Bayes
 _Unreliable due to independence requirement. Skipping._
-```{r}
+```{#r}
 nb <- naiveBayes(CARAVAN~., train)
 ```
 
 ### Neural Net
 ```{r}
 nn <- nnet(CARAVAN~., train, size=1)
-```
-```{r}
 nn.pred <- predict(nn, test, type='class')
 table(test$CARAVAN, nn.pred)
 ```
 The neural has predicted all the test observations to be 'noinsurance'. This is probably due to the difference in class counts in the observations.
+
+### Summary
+None of the techniques used in this iteration provided satisfactory results. To sum up the findings:
+- Logistic Regression
+  - Returned warnings, plus the nature of the model requires the same dummy variables in both training and testing. This was not the case.
+- Decision Tree:
+  - Nodes weren't even created. Probably due to the large skew of the CARAVAN class.
+- Random Forest
+  - Horrible accuracy.
+- Neural Net
+  - Did not assign a single observation to 'insurance'. 
 
 
 2.5 Modeling Iter. 2
@@ -211,6 +224,7 @@ Unfortunately the results still aren't the best. The false negative rate is huge
 train.temp <- train.over
 train.temp$STYPE <- as.numeric(train.temp$STYPE)
 rf <- randomForest(CARAVAN~., train.temp)
+rf
 ```
 These in-sample results are great! This time the forest was able to correctly identify all of the "insurance" observations (though they are oversampled).
 ```{r}
@@ -272,6 +286,7 @@ And also not too surprisingly, the results are a bit worse give we removed a ton
 train.temp <- train.dt
 train.temp$STYPE <- as.numeric(train.temp$STYPE)
 rf <- randomForest(CARAVAN~., train.temp)
+rf
 ```
 
 ```{r}
@@ -287,4 +302,73 @@ It looks like doing a feature selection through decision tree EDA just isn't tha
 
 Modeling Iter. 4
 ----------------
+While oversampling did balance our dataset out enough to enable actual modeling, undersampling may be better due to the underlying methodology. Instead of producing fake date we will randomly sample the 'noinsurance' class to even out the balance.
+### Undersample
+```{r}
+train.under <- train
+table(train.under$CARAVAN)
+```
+Like before, we start off with there are 256 "insurance" and 3819 "noinsurance". To make this balanced we will randomly sample 256 "noinsurance" observations.
+```{r}
+mask <- sample(3819, 256)
+temp <- subset(train.under, CARAVAN %in% 'noinsurance')
+temp <- temp[mask,]
+train.under <- rbind(temp, subset(train.under, CARAVAN %in% 'insurance'))
 
+table(train.under$CARAVAN)
+```
+There are now 256 "insurance" and 256 "noinsurance". Let's try some of the same models again.
+
+IGNORE
+The truncating of the dataset has **cut down observations of classes within some variables#**. This means that we will have to redo the factors inside the dataset.
+/IGNORE
+
+
+### Logistic Regression
+```{r}
+lrm <- glm(CARAVAN~., train.under, family=binomial)
+```
+New error this time: contrasts can be applied only to factors with 2 or more levels
+This means that we've cut down too much data for the logistic regression to actually process... Let's try something else for now.
+
+### Decision Tree
+```{r}
+dt <- rpart(CARAVAN~., train.under, method='class')
+printcp(dt)
+```
+The model actually produced results this time. Let's test it.
+```{r}
+dt.pred <- predict(dt, test, type='class')
+table(dt.pred, test$CARAVAN)
+```
+These results are comparable to the oversampling trial before.. The false negative rate is huge 641/1655 and the false positive rate is 28/92. 
+
+### Random Forest
+```{r}
+train.temp <- train.under
+train.temp$STYPE <- as.numeric(train.temp$STYPE)
+rf <- randomForest(CARAVAN~., train.temp)
+rf
+```
+Not the best
+```{r}
+test.temp <- test
+test.temp$STYPE <- as.numeric(test.temp$STYPE)
+rf.pred <- predict(rf, test.temp)
+table(test$CARAVAN, rf.pred)
+```
+When looking at the test set, unfortunately, the out-of-samply accuracy decreases drastically...
+
+### Neural Net
+```{r}
+nn <- nnet(CARAVAN~., train.over, size=1)
+```
+```{r}
+nn.pred <- predict(nn, test, type='class')
+table(test$CARAVAN, nn.pred)
+```
+
+
+Modeling Iter. 5
+----------------
+Feature selection
