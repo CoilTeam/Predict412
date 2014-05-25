@@ -79,7 +79,7 @@ colnames(testpreds) <- "testy"
 # set up metrics frame - run once
 combinedresults  <- as.data.frame(c(1:6))
 combinedresults  <- t(combinedresults)
-colnames(combinedresults)  <- c("Method_Name", "Test_Set_True_Positives", "TP_Identified", "Baseline", "Lift", "Balanced_Train_Set?")
+colnames(combinedresults)  <- c("Method_Name", "Validation_Set_True_Positives", "TP_Identified", "Baseline", "Lift", "Balanced_Train_Set?")
 # kludge
 combinedresults <- combinedresults[-1,]
 ###################################################################################
@@ -287,3 +287,26 @@ colnames(testpredsbt) <- "yhat"
 order <- testpredsbt[order(testpredsbt$yhat,decreasing=TRUE),]
 head(order)
 ###################################################################################
+# Nathan's GLM model, on balanced and unbalanced data
+methodname  <- "GLM"
+BT <- "N"
+model <- CARAVAN ~ MOPLLAAG+MBERBOER+MAUT1+MINK3045+MINK4575+PWAPART+PWALAND+PPERSAUT+PTRACTOR+PGEZONG+PBRANDnum+PFIETS+AWAPART+AWALAND+APERSAUT+ABESAUT+AVRAAUT+ATRACTOR+ABROM+APERSONG+AGEZONG+ABRAND+APLEZIER+AFIETS+ABYSTAND
+tic.train$PBRANDnum <- as.numeric(tic.train$PBRAND)
+tic.test$PBRANDnum <- as.numeric(tic.test$PBRAND)
+tic.glm <- glm(model, data=tic.train, family=binomial(link='logit'))
+predictions  <- predict(tic.glm, newdata=tic.test, type='response')
+results1  <- evaluate(methodname, predictions, combinedresults)
+combinedresults  <- rbind(combinedresults, results1)
+combinedresults
+
+
+methodname  <- "GLM"
+BT <- "Y"
+model <- CARAVAN ~ MOPLLAAG+MBERBOER+MAUT1+MINK3045+MINK4575+PWAPART+PWALAND+PPERSAUT+PTRACTOR+PGEZONG+PBRANDnum+PFIETS+AWAPART+AWALAND+APERSAUT+ABESAUT+AVRAAUT+ATRACTOR+ABROM+APERSONG+AGEZONG+ABRAND+APLEZIER+AFIETS+ABYSTAND
+bal.tic.train$PBRANDnum <- as.numeric(bal.tic.train$PBRAND)
+tic.test$PBRANDnum <- as.numeric(tic.test$PBRAND)
+tic.glm <- glm(model, data=bal.tic.train, family=binomial(link='logit'))
+predictions  <- predict(tic.glm, newdata=tic.test, type='response')
+results1  <- evaluate(methodname, predictions, combinedresults)
+combinedresults  <- rbind(combinedresults, results1)
+combinedresults
