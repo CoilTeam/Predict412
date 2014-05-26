@@ -1,0 +1,1222 @@
+##################################
+### Term PRoject 412 Spring 2014 #
+##################################
+
+##>>>>> NOTE, skip to next set of five >>>>> to begin with tictada_subset.csv
+## that file includes the selected subset including all interaction variables
+
+
+
+
+
+
+###############################################################################
+#### New Approach for Performance (Lift) ######################################
+#### With interaction subsets specified #######################################
+
+
+
+
+set.seed(123)
+library(plyr)
+library(xlsx)
+library(sampling)
+library(pls)
+library(MASS)
+library(kernlab)
+library(ROCR)
+library(caret)
+# office: setwd("E:/New folder/Term Project/R files")
+# home: setwd("~/Career/Finance & Statistics/Masters & MFE/Programs/NWestern/Academics/412 Advanced Modeling/Term Project/R files")
+
+# load data and check data integrity
+data(ticdata)
+nrow(ticdata)
+#Seperate STYPE
+dim(ticdata)
+head(as.numeric(ticdata[,"STYPE"]))
+str(ticdata[,"STYPE"])
+MOSTYPE = as.numeric(ticdata[,"STYPE"])
+head(MOSTYPE)
+STYPE1 = ifelse(MOSTYPE>30,MOSTYPE,0)
+STYPE2 = ifelse(MOSTYPE<=30,ifelse(MOSTYPE>20,MOSTYPE,0),0)
+STYPE3 = ifelse(MOSTYPE<=20,ifelse(MOSTYPE>10,MOSTYPE,0),0)
+STYPE4 = ifelse(MOSTYPE<=10,ifelse(MOSTYPE>1,MOSTYPE,0),0)
+head(data.frame(MOSTYPE, STYPE1, STYPE2, STYPE3, STYPE4), n=50)
+ticdata$STYPE1 = factor(STYPE1)
+ticdata$STYPE2 = factor(STYPE2)
+ticdata$STYPE3 = factor(STYPE3)
+ticdata$STYPE4 = factor(STYPE4)
+head(ticdata)
+
+### Create interaction Variables based on pre-selected subset 
+### (coming from a union of RF, Rpart, sw and Lasso on original variables) 
+### Code not included here 
+Xint = model.matrix(~(ABRAND
+                      +APERSAUT
+                      +APLEZIER
+                      +AWAOREG
+                      +MBERARBG
+                      +MFWEKIND
+                      +MGEMOMV
+                      +MHHUUR
+                      +MINKGEM
+                      +MKOOPKLA
+                      +MOPLHOOG
+                      +MOPLLAAG
+                      +MOSHOOFD
+                      +STYPE1
+                      +STYPE4
+                      +PBRAND
+                      +PPERSAUT
+                      +PPLEZIER
+                      +PWAPART
+                      +STYPE)^2-1,ticdata) 
+str(Xint)
+# created the output of the full dataset with interaction variables
+# write.csv(Xint, file="Xint.csv", sep=",", col.names=TRUE)
+### The above outputs the full set of dependent variables 
+### and all of their possible combinations of interaction variables
+
+# check outputs are aligned with independent variable
+data.frame(ticdata[1:20, c("CARAVAN","ABRAND")],Xint[1:20,"ABRAND"])
+all(ticdata[,"ABRAND"] == Xint[,"ABRAND"])
+# True
+## coerce to df; DO NOT use as.data.frame.model.matrix as this results in one column
+class(Xint)
+Xint = as.data.frame(Xint) # took min 45 mins
+class(Xint)
+dim(Xint) # note the super high dimensionality
+# note redundent columns with ticdata; ignore for now, b/c new x frame to be created
+head(Xint)
+names(Xint)
+Xint[1:5,1:10] # first cols
+Xint[1:5,(ncol(Xint)-5):ncol(Xint)] # last cols
+which( colnames(Xint)=="AWAOREG" ) #last duplicate (b/c simple binomial response)
+
+# create Y table to append
+Yint = ticdata[,"CARAVAN"]
+head(Yint)
+write.csv(Yint, file="Yint.csv", sep=",", col.names=TRUE)
+# manually combined Yint and Xint CSV files, else very long run time
+
+#create new dataframe with interaction variables and selected variables
+# do not run, takes min 15-35 mins; appended mannually a csv
+# ticdata=cbind(Yint,Xint)
+# class(ticdata)
+# ticdata[1:5,(ncol(ticdata)-5):ncol(ticdata)]
+# head(ticdata)
+# dim(ticdata)  # note the super high dimensionality
+
+#################################################################################
+### RESTART WITH FILES DUE TO LARGE DATA CONSTRAINTS:
+# pull saved data sets with interaction effects; only 4k of total data.set:
+# office: setwd("E:/New folder/Term Project/R files")
+# home: setwd("~/Career/Finance & Statistics/Masters & MFE/Programs/NWestern/Academics/412 Advanced Modeling/Term Project/R files")
+memory.size()/3999 # % of 3999MB available RAM
+# ticdata = read.csv("ticdata_Int.csv", header= TRUE) # ~5 min run
+Xint = data.matrix(read.csv("Xint_4k.csv", header= TRUE)) # similar
+Yint = read.csv("Yint_4k.csv", header= TRUE) # quick
+str(Yint)
+head(Yint)
+Yint$CARAVAN = ifelse(Yint[,2] == "insurance",1,0)
+Yint = Yint[,"CARAVAN"]
+Yint = as.matrix(Yint)
+dim(Xint)  # note the super high dimensionality
+# runtime: 7 mins total for the above
+memory.size()/3999 # % of 3999MB available RAM
+proc.time()
+#object.size(ticdata)/1000000/3999 #MB of the 3999 avail.
+#object.size(Xint)/1000000/3999 #MB of the 3999 avail.
+#object.size(Yint)/1000000/3999 #MB of the 3999 avail.
+class(Xint)
+class(Yint)
+
+##################################################################################
+##################################################################################
+### VARIABLE SELECTION
+### Lasso  with interaction variables
+# SOURCE http://www.stanford.edu/~hastie/glmnet/glmnet_alpha.html#log
+# install.packages("glmnet")
+library(glmnet)
+
+fit = glmnet(Xint, Yint, family="binomial") # took <10mins
+memory.size()/3999 # % of 3999MB available RAM
+# plot(fit, xvar = "dev", label = TRUE)
+# plot(fit)
+
+# use cross validationto determine lambda (s):
+cvfit = cv.glmnet(Xint, Yint, family = "binomial", type.measure = "class", nfolds=4)
+proc.time()/60
+plot(cvfit)
+cvfit$lambda.min
+cvfit$lambda.1se
+
+# result of lambda min:
+Lasso_Results = data.matrix(coef(cvfit, s = "lambda.min"))
+write.csv(Lasso_Results, file="Lasso_Results.csv", sep = ",", col.names = TRUE)
+# coef(cvfit, s = "lambda.1se") # gives within 1SD of minimum optimal for lower dimensionality subset
+names(Xint[,119])
+summary(cvfit)
+
+
+
+
+##################################################################################
+### Recreate Datasets with subset variables & interactions:
+rm(list=ls()) # removes (almost everything in working environment)
+#begin with total dataset:
+ticdata = read.csv("ticdata_Int.csv", header= TRUE) # ~5 min run (3.5 office)
+class(ticdata) # confirm df
+ticdata[1:3,118:120] # confirm index (119 = PPLEZIER.4)
+names(ticdata[,269:270]) # confirm index; must add 1 to original output index
+# confirm 367 is APERSAUT.MHHUUR.6
+ticdata[1:3,366:367]
+# confirming how to add indexes:
+index = c(269,270)
+names(ticdata[,c(2,index)])
+# index list of selected variables:
+index = c(120,
+          270,
+          280,
+          367,
+          372,
+          395,
+          405,
+          440,
+          450,
+          484,
+          516,
+          519,
+          543,
+          602,
+          615,
+          647,
+          739,
+          748,
+          756,
+          801,
+          831,
+          863,
+          953,
+          1007,
+          1058,
+          1059,
+          1073,
+          1076,
+          1103,
+          1109,
+          1151,
+          1429,
+          1507,
+          1518,
+          1607,
+          1631,
+          1738,
+          1912,
+          1923,
+          2176,
+          2264,
+          2308,
+          2326,
+          2368,
+          2467,
+          2612,
+          2655,
+          2674,
+          2823,
+          2842,
+          2865,
+          2890,
+          2966,
+          2975,
+          3228,
+          3247,
+          3270,
+          3345,
+          3347,
+          3355,
+          3812,
+          3920,
+          3924,
+          3942,
+          3954,
+          3957,
+          4012,
+          4140,
+          4144,
+          4220,
+          4242,
+          4246,
+          4247,
+          4274,
+          4342,
+          4425,
+          4426,
+          4625,
+          4647,
+          4651,
+          4652,
+          4679,
+          4848,
+          4853,
+          4887,
+          4891,
+          5061,
+          5108,
+          5223,
+          5284,
+          5355,
+          5436,
+          5438,
+          5468,
+          5576,
+          5643,
+          5681,
+          5688,
+          5748,
+          5760,
+          6031,
+          6293,
+          6565,
+          6576,
+          6744,
+          6781,
+          6957,
+          7237,
+          7359,
+          7412,
+          7427,
+          7458,
+          7681,
+          7690,
+          7832,
+          8106,
+          8320,
+          8365,
+          8473,
+          8475,
+          8536,
+          8629,
+          8770,
+          8866,
+          9360,
+          9376,
+          9534,
+          9543,
+          10191,
+          10644,
+          10767,
+          10794,
+          10956,
+          10965,
+          11374,
+          11375,
+          11438,
+          11444,
+          11449,
+          11518,
+          11569,
+          11683,
+          11802,
+          11950,
+          12017,
+          12023,
+          12025,
+          12131,
+          12134,
+          12179,
+          12216,
+          12225,
+          12728,
+          12899,
+          12900,
+          12951)
+count(index)
+ticdata2 = ticdata[,c(2,index)]
+names(ticdata2)
+dim(ticdata2)
+write.csv(ticdata2, file="tictada_subset.csv", sep = ",", col.names = TRUE)
+
+
+# Dependent Variable Set
+which(colnames(ticdata2)=="CARAVAN")
+x = ticdata2[,-1]
+head(x)
+write.csv(x, file="x_subset.csv", sep = ",", col.names = TRUE)
+# Respondent Set
+CARAVAN = ticdata2[,1]
+y = as.data.frame(CARAVAN)
+str(y)
+colnames(y)
+write.csv(y, file="y_subset.csv", sep = ",", col.names = TRUE)
+###
+
+# set ticdata to new subsetted data set:
+ticdata = ticdata2
+
+
+
+
+
+#################################################################################
+#Return to model testing:
+###################################################################################
+
+
+## >>>>> NOTE, to begin with tictada_subset.csv run the following 
+
+## this file includes the selected subset including all interaction variables
+# ticdata = read.csv("tictada_subset.csv", header= TRUE)
+# class(ticdata) # confirm df, if not transform with ticdata = as.data.frame(ticdata)
+
+
+tic <- ticdata[1:5822,] # Select training data only
+head(tic)
+rows <- nrow(tic)
+rows
+compcases <- sum(complete.cases(tic))
+# if this logical test returns false, data is missing.
+rows==compcases
+# there is no missing data
+###################################################################################
+summary(tic[,1])
+# there are 348 positive responses in the total set
+posinst <- nrow(tic[tic$CARAVAN=="insurance",])
+# base rate for positive response (CARAVAN=1) is ~ 6%
+baserate <- round(posinst/nrow(tic), digits=4)
+baserate
+# for 70/30 split, the test set should have 104 positive responses, +/- 1
+pos_test_obs <- trunc(baserate*nrow(tic)*.3)
+pos_test_obs
+###################################################################################
+# partition into train and test
+# stratify first, otherwise could be easy for one set to get no pos responses
+# calculate how to stratify to get equal representation in train and test:
+# how many positive instances should the train set have?
+postrain <- trunc(posinst*.7)
+postrain
+# how many negative instances should the train set have?
+negtrain <- trunc((rows-posinst)*.7)
+negtrain
+# add a stratum column which will be used to split the set into train and test:
+strata <- strata(tic, stratanames=c("CARAVAN"), size=c(negtrain,postrain), method="srswor")
+# split into train and test
+tic.train <- tic[rownames(tic) %in% strata$ID_unit,]
+tic.test <- tic[!rownames(tic) %in% strata$ID_unit,]
+# here is how the respective sets look:
+table(tic.train$CARAVAN)
+table(tic.test$CARAVAN)
+table(tic.train$CARAVAN)[1]/sum(table(tic.train$CARAVAN)[1:2])
+table(tic.test$CARAVAN)[1]/sum(table(tic.test$CARAVAN)[1:2])
+# after stratification, the test set is 2 rows longer than the strict 70% calc, and has 105 positive responses rather than the raw calc of 104, which is fine:
+trainsize <- nrow(tic.train)
+testsize <- nrow(tic.test)
+trainsize
+testsize
+# Many algorithms won't do well if the data is presented one class then the other in the train set
+tic.train <- tic.train [sample(nrow(tic.train)),]
+###################################################################################
+# break out response and predictors for those methods that need them separated
+ytrain <- ifelse(tic.train$CARAVAN=="insurance",1,0)
+which(colnames(tic.train)=="CARAVAN")
+xtrain <- as.data.frame(tic.train[,-1])
+ytest <- ifelse(tic.test$CARAVAN=="insurance",1,0)
+xtest <- as.data.frame(tic.test[,-1])
+# save number of true positive responses in the test set for use in table later
+test_truepos <- sum(ytest)
+# make a formula for general use across methods
+ticvars <- setdiff(colnames(tic.train),list('CARAVAN'))
+#ticvars
+# ticformula <- as.formula(paste('CARAVAN=="CARAVAN"', paste(ticvars,collapse=' + '),sep=' ~ '))
+ticformula <- as.formula(paste('CARAVAN', paste(ticvars,collapse=' + '),sep=' ~ '))
+ticformula
+###################################################################################
+# set up repository to collect results
+trainpreds <- as.data.frame(ytrain)
+testpreds <- as.data.frame(ytest)
+colnames(trainpreds) <- "trainy"
+colnames(testpreds) <- "testy"
+###################################################################################
+# set up metrics frame - run once
+combinedresults <- as.data.frame(c(1:6))
+combinedresults <- t(combinedresults)
+colnames(combinedresults) <- c("Method_Name", "Test_Set_True_Positives", "TP_Identified", "Baseline", "Lift", "Balanced_Train_Set?")
+# kludge
+combinedresults <- combinedresults[-1,]
+###################################################################################
+## begin with unbalanced, then balanced set below
+###################################################################################
+# Scoring
+# CoIL asked for the 800 test observations with highest probability of being positive responses
+# The final holdout set has 4000 rows, so 800 is the top 20%
+# We want to do the same thing in our test set (to identify our best model)
+# our test set has 1748 rows
+testsetsize <- nrow(tic.test)
+testsetsize
+# we want to select our top 20%, so this is 350 predictions:
+topquintile_test <- round((testsetsize*.2), digits=0)
+topquintile_test
+# In any random sample of 350 observations from the data, there should be 20 or 21 positive responses:
+baserate*topquintile_test
+# this is very close to 21, so let's round it up
+Baseline <- 21
+# the best model is the one that achieves the highest lift over 21 in the top 350
+# (350 with highest predicted Pr(yhat=1|X))
+###################################################################################
+# create function to evaluate results
+evaluate <- function(methodname, predictions, combinedresults){
+  lift <- as.data.frame(cbind(ytest, predictions))
+  colnames(lift) <- c("y", "yhat")
+  order <- lift[order(lift$yhat,decreasing=TRUE),]
+  liftcut <- order[1:350,]
+  TP <- sum(liftcut$y)
+  Lift <- TP-Baseline
+  results <- as.vector(c(methodname, test_truepos, TP, Baseline, Lift, BT))
+}
+###################################################################################
+# set classification thresholds
+threshold <- seq(.1, 0.9, 0.1)
+###################################################################################
+# save final results
+#combinedresults <- combinedresults[-1,]
+#combinedresults
+write.xlsx2(combinedresults,"E:/New folder/Term Project/R files/results.xlsx",col.names=TRUE, row.names=FALSE)
+###################################################################################
+# tree model
+library(rpart)
+# next two lines pass the method name and whether balanced data was used or not to the final results table:
+methodname <- "tree model"
+BT <- "N"
+# run the tree
+tic.tree <- rpart(ticformula,data=tic.train) 
+predictions<- as.data.frame(predict(tic.tree, newdata=tic.test))[,2]
+results1 <- evaluate(methodname, predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+# for computational eda:
+printcp(tic.tree)
+library(maptree)
+draw.tree(tic.tree, cex=0.5, nodeinfo=TRUE, col=gray(0:8 / 8))
+###################################################################################
+# logistic regression via glm
+# next two lines pass the method name and whether balanced data was used or not
+# to the final results table:
+methodname <- "logistic regression via glm"
+BT <- "N"
+# log regression using the 5 predictors identified by an earlier tree model
+tic.glm <- glm(ticformula, data=tic.train, family=binomial(link='logit'))
+predictions <- predict(tic.glm, newdata=tic.test, type='response')
+results1 <- evaluate(methodname, predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+###################################################################################
+# neural network
+library(nnet)
+BT <- "N"
+methodname <- "neural network"
+tic.nnet <- nnet(ticformula, data=tic.train, size=4)
+predictions <- predict(tic.nnet, newdata=tic.test)
+results1 <- evaluate(methodname, predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###################################################################################
+# naive bayes
+library(e1071)
+BT <- "N"
+methodname <- "naive bayes"
+tic.nb <- naiveBayes(xtrain, ytrain)
+predictions <- predict(tic.nb, newdata=tic.test[,-1], type='raw')[,2]
+head(predictions)
+results1 <- evaluate(methodname, predictions=predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+###################################################################################
+# retry logistic regression with sw
+# next two lines pass the method name and whether balanced data was used or not
+# to the final results table:
+methodname <- "logistic regression w/sw fwd"
+BT <- "N"
+swfwd = stepAIC(tic.glm, data=tic.train, alpha = 0.05, direction = "backward")
+swfwd$anova
+# log regression using the predictors identified by the sw fwd model
+tic.glm2 <- glm(     , data=tic.train, family=binomial(link='logit'))
+predictions <- predict(tic.glm2, newdata=tic.test, type='response')
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+###################################################################################
+###################################################################################
+# retry logistic regression with bootsw
+# next two lines pass the method name and whether balanced data was used or not
+# to the final results table:
+methodname <- "logistic regression w/boot sw fwd"
+BT <- "N"  
+library(bootStepAIC)
+tic.glm2 <- boot.stepAIC(tic.glm, data=tic.train, family=binomial(link='logit'),
+            alpha = 0.05, direction = "forward")
+tic.glm2$Covariates
+tic.glm2$Significance
+## No difference, Lasso results hold up.  Continue with all variables selected prior. 
+
+###################################################################################
+# Methods which predict T/F rather than conditional probabilities
+# not sure how to get probabilities out for comparison with the other results
+###################################################################################
+# boosting
+methodname <- "boosting"
+library(ada)
+BT <- "N"
+tic.ada <- ada(ticformula, data=tic.train, type="discrete", loss="logistic")
+predictions <- predict(tic.ada, newdata=tic.test)
+table(actual=ytest, predicted=predictions)
+###################################################################################
+# bagging
+methodname <- "bagging"
+BT <- "N"
+library(adabag)
+# I don't think this is really converging. Posterior probabilities using the
+# balanced data are all NaN. Definitely doesn't converge on unbalanced train data
+tic.bag <- bagging(CARAVAN~., data=tic.train)
+yhat<- predict(tic.bag, newdata=tic.test)
+yhat$predictions <- ifelse(yhat$yhat=="insurance", 1, 0)
+predictions <- ifelse(yhat=="insurance", 1, 0)
+sum(yhat$predictions)
+table(predictions)
+results1 <- evaluate(methodname, predictions=testpreds$bag, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+###################################################################################
+# bayes tree
+library(BayesTree)
+methodname <- "bayes tree"
+BT <- "N"
+tic.bt <- bart(xtrain, ytrain, tic.test[, -86])
+str(tic.bt)
+library(slam)
+predictions <- as.data.frame(col_means(tic.bt$yhat.test))
+head(predictions)
+testpredsbt$obs <- c(1:1748)
+head(testpredsbt)
+colnames(testpredsbt) <- "yhat"
+order <- testpredsbt[order(testpredsbt$yhat,decreasing=TRUE),]
+head(order)
+###################################################################################
+
+
+##############################################################################
+##############################################################################
+#### RERUN MODELS WITH BALANCED DATA #########################################
+################################################################################################################################################################
+# balance train data
+library(unbalanced)
+set.seed(123)
+### couldn't run the library on the plane, so tried without ####
+#balance the dataset
+# 'type' parameter: The argument type can take the following values: "ubOver" (over-sampling), "ubUnder" (undersampling), "ubSMOTE" (SMOTE), "ubOSS" (One Side Selection), "ubCNN" (Condensed Nearest Neighbor), "ubENN" (Edited Nearest Neighbor), "ubNCL" (Neighborhood Cleaning Rule),"ubTomek" (Tomek Link)
+ytrainfactor <- as.factor(ytrain)
+
+
+
+ytestfactor <- as.factor(ytest) ### believe this was an error (was ytrain)
+
+
+
+balancedData<- ubBalance(as.data.frame(xtrain),ytrainfactor, type="ubOver")
+bal.tic.train<-cbind(balancedData$X,balancedData$Y)
+head(bal.tic.train)
+bal.tic.train <- rename(bal.tic.train, c("balancedData$Y" = "CARAVAN"))
+bal.xtrain <- as.data.frame(balancedData$X)
+head(bal.xtrain)
+bal.ytrain <- bal.tic.train$CARAVAN
+summary(bal.tic.train)
+#################################################################################
+
+
+###################################################################################
+# tree model
+library(rpart)
+# next two lines pass the method name and whether balanced data was used or not to the final results table:
+methodname <- "tree model fixed balance"
+BT <- "Y"
+# run the tree
+tic.tree <- rpart(ticformula,data=bal.tic.train) 
+predictions<- as.data.frame(predict(tic.tree, newdata=tic.test))[,2]
+results1 <- evaluate(methodname, predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+# for computational eda:
+printcp(tic.tree)
+library(maptree)
+draw.tree(tic.tree, cex=0.5, nodeinfo=TRUE, col=gray(0:8 / 8))
+###################################################################################
+# logistic regression via glm
+# next two lines pass the method name and whether balanced data was used or not
+# to the final results table:
+methodname <- "logistic regression via glm fxd bal"
+BT <- "Y"
+# log regression using the 5 predictors identified by an earlier tree model
+tic.glm <- glm(ticformula, data=bal.tic.train, family=binomial)
+predictions <- predict(tic.glm, newdata=tic.test, type='response')
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+###################################################################################
+# neural network
+library(nnet)
+BT <- "Y"
+methodname <- "neural network fxd bal"
+tic.nnet <- nnet(ticformula, data=bal.tic.train, size=4)
+predictions <- predict(tic.nnet, newdata=tic.test)
+results1 <- evaluate(methodname, predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+# same performance as glm
+###################################################################################
+# naive bayes
+library(e1071)
+BT <- "Y"
+methodname <- "naive bayes fxd bal rerun check"
+tic.nb <- naiveBayes(bal.xtrain, bal.ytrain)
+predictions <- predict(tic.nb, newdata=xtest, type='raw')[,2]
+head(predictions)
+results1 <- evaluate(methodname, predictions=predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+# test NB on unbalanced data:
+BT <- "N"
+methodname <- "naive bayes"
+tic.nb <- naiveBayes(xtrain, ytrain)
+predictions <- predict(tic.nb, newdata=xtest, type='raw')[,2]
+head(predictions)
+results1 <- evaluate(methodname, predictions=predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+# use T/F predictions for use with learning curves
+methodname <- "naive bayes"
+BT <- "N"
+#set up matrix to hold results
+lcmat <- t(as.matrix(c(1,1)))
+colnames(lcmat) <- c("train_err", "test_err")
+lcmat <- lcmat[-1,]
+# set up vector of train set sizes
+trainfraction <- seq(0.1,1,0.1)
+trainlength <- trunc(as.vector(trainsize*trainfraction))
+trainlength
+
+#iterate model over increasing sample size
+for(i in trainlength){
+  tic.nb <- naiveBayes(ticformula, data=tic.train[1:i,])
+  yhat_train <- predict(tic.nb,tic.train[1:i,])
+  yhat_test <- predict(tic.nb, newdata=tic.test)
+  yhat_train<- ifelse(yhat_train=="insurance", 1, 0)
+  yhat_test <- ifelse(yhat_test=="insurance", 1, 0)
+  # train error
+  traincomb <- as.data.frame(cbind(ytrain[1:i],yhat_train))
+  traincomb <- within(traincomb, residual <- abs(ytrain[1:i]-yhat_train))
+  train_err <- round(sum(traincomb$residual)/nrow(traincomb), digits=4)
+  train_err
+  # test error
+  testcomb <- as.data.frame(cbind(ytest,yhat_test))
+  testcomb <- within(testcomb, residual <- abs(ytest-yhat_test))
+  test_err <- round(sum(testcomb$residual)/nrow(testcomb), digits=4)
+  results <- as.vector(c(train_err, test_err))
+  lcmat <- as.data.frame(rbind(lcmat,results))
+}
+
+write.xlsx2(lcmat,"D:/R Working Directory/Predict412/teamproject/learningcurve.xlsx",col.names=TRUE, row.names=FALSE)
+
+# get the range for the x and y axis
+xrange <- range(trainlength)
+yrange <- range(c(0,lcmat$test_err))
+linetype <- c(1:2)
+plotchar <- seq(18,19,1)
+
+#plot the learning curve
+plot(xrange,yrange,xlab="Number of training examples",ylab="Error")
+lines(trainlength, lcmat$train_err, type="b", lwd=1.5, lty=linetype[1], col=colors[1], pch=plotchar[1])
+lines(trainlength, lcmat$test_err, type="b", lwd=1.5, lty=linetype[2], col=colors[2], pch=plotchar[2])
+legend(x=500, y=0.8, c("train", "test"), cex=0.8, col=colors, pch=plotchar, lty=linetype, title="Naive Bayes Learning Curve")
+###################################################################################
+# save final results
+#combinedresults <- combinedresults[-1,]
+#combinedresults
+write.xlsx2(combinedresults,"D:/R Working Directory/Predict412/teamproject/results.xlsx",col.names=TRUE, row.names=FALSE)
+###################################################################################
+# Methods which predict T/F rather than conditional probabilities
+# not sure how to get probabilities out for comparison with the other results
+###################################################################################
+# boosting
+methodname <- "boosting"
+library(ada)
+BT <- "Y"
+tic.ada <- ada(ticformula, data=bal.tic.train, type="discrete", loss="logistic")
+predictions <- predict(tic.ada, newdata=tic.test)
+table(actual=ytest, predicted=predictions)
+###################################################################################
+# bagging
+methodname <- "bagging"
+BT <- "N"
+library(adabag)
+# I don't think this is really converging. Posterior probabilities using the
+# balanced data are all NaN. Definitely doesn't converge on unbalanced train data
+tic.bag <- bagging(CARAVAN~., data=bal.tic.train)
+yhat<- predict(tic.bag, newdata=tic.test)
+yhat$predictions <- ifelse(yhat$yhat=="insurance", 1, 0)
+predictions <- ifelse(yhat=="insurance", 1, 0)
+sum(yhat$predictions)
+table(predictions)
+results1 <- evaluate(methodname, predictions=testpreds$bag, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+###################################################################################
+# bayes tree
+library(BayesTree)
+methodname <- "bayes tree"
+BT <- "N"
+tic.bt <- bart(bal.xtrain, bal.ytrain, tic.test[, -86])
+str(tic.bt)
+library(slam)
+predictions <- as.data.frame(col_means(tic.bt$yhat.test))
+head(predictions)
+testpredsbt$obs <- c(1:1748)
+head(testpredsbt)
+colnames(testpredsbt) <- "yhat"
+order <- testpredsbt[order(testpredsbt$yhat,decreasing=TRUE),]
+head(order)
+###################################################################################
+###################################################################################
+
+##################################################################################
+# save final results
+#combinedresults <- combinedresults[-1,]
+#combinedresults
+write.xlsx2(combinedresults,"E:/New folder/Term Project/R files/results_Interactions.xlsx",col.names=TRUE, row.names=FALSE)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###################################################################################
+###################################################################################
+APPENDIX   OLD RUNS:
+##################################################################################
+
+  
+  
+  # AFTER LOADING SIMPLE csv, USING tEST SET:
+  
+  #note for rattle:
+  #library(rattle)
+  #rattle()
+  
+  #Load Data:
+  Train2=read.csv("Train2.csv")
+Train2=as.data.frame(Train2)
+head(Train2)
+attach(Train2)
+class(MOSTYPE)
+# class is incorrect.  Change numeric to dummy variables for analysis:
+MOSTYPE=factor(MOSTYPE)
+MOSTYPE1=factor(MOSTYPE1)
+MOSTYPE2=factor(MOSTYPE2)
+MOSTYPE3=factor(MOSTYPE3)
+MOSTYPE4=factor(MOSTYPE4)
+MOSTYPE5=factor(MOSTYPE5)
+class(MOSTYPE5)
+plot(CARAVAN~MOSTYPE5) 
+par(mfrow=c(2,2))
+plot(CARAVAN~MOSTYPE1) 
+plot(CARAVAN~MOSTYPE2) 
+plot(CARAVAN~MOSTYPE3) 
+plot(CARAVAN~MOSTYPE4) 
+par(mfrow=c(1,1))
+
+# Run Logistic Regression #
+Lm1 = glm(CARAVAN~MOSTYPE, family=binomial) # like lm, but with GLM and family-binomial specified
+summary(Lm1) #smaller AIc is better
+plot(Lm1)
+Lm2 = glm(CARAVAN~MOSTYPE5, family=binomial) # use without the zero variables
+summary(Lm2) 
+round(exp(cbind(Estimate=coef(Lm1),confint(Lm1))),2) # for conf int and odds ratios
+library(rms)
+Lm1 <- lrm(CARAVAN~MOSTYPE)
+Lm1
+Lm2 <- lrm(CARAVAN~MOSTYPE5)
+Lm2
+
+# variable selection
+Lm3 = glm(CARAVAN~., data=Train2,family=binomial)
+summary(Lm3)
+step(Lm3)
+#run selected vars:
+library(rms)
+Lm4 = glm(CARAVAN ~ MGEMLEEF + MOSHOOFD + MRELGE + MOPLMIDD + MOPLLAAG + 
+            MBERMIDD + MSKC + MHHUUR + MHKOOP + MAUT1 + MZFONDS + MZPART + 
+            MINKM30 + MINK3045 + MINK4575 + MINK7512 + PWAPART + PWALAND + 
+            PPERSAUT + PTRACTOR + PWERKT + PLEVEN + PWAOREG + PBRAND + 
+            PFIETS + PINBOED + AWAPART + ATRACTOR + ALEVEN + AWAOREG + 
+            APLEZIER + AINBOED + ABYSTAND + MOSTYPE1 + MOSTYPE5, family=binomial, data=Train2)
+summary(Lm4)
+# pseudo R2
+library(pscl)
+pR2(Lm4)
+pR2(Lm3)
+
+
+# Stepwise logistic
+require(MASS)
+stepAIC(Lm3,k=log(nrow(Train2)), direction="both") #apparently stepwise is in Rcmdr, mustusethisfor MASS
+
+# cross validation LOOCV and k-fold
+#cv.glm(data, glmfit, cost, K) ; package (boot) ; cost = default is avg. sq error
+library(boot)
+cost <- function(CARAVAN, pi = 0) mean(abs(CARAVAN-pi) > 0.5)
+# too long to run and worth less vs. cv (cv.glm(Train2,Lm3,cost,K= nrow(Train2))$delta) # LOOCV
+(cv.glm(Train2,Lm3,cost,K= 5)$delta) # 5-fold
+(cv.glm(Train2,Lm4,cost,K= 5)$delta) # 5-fold
+
+
+
+
+### 11 May 14 ###
+
+## Load Data: This is the training set
+library(kernlab)
+data(ticdata)
+head(ticdata)
+data_all=ticdata
+head(data_all)
+str(data_all)
+
+#remove training set: first 5822.
+data=data_all[1:5822,]
+nrow(data)
+str(data)
+summary(data_all)
+summary(data)
+data_all$CARAVAN[insurance]
+tapply(data_all$CARAVAN,data_all$CARAVAN,length)[2]/tapply(data_all$CARAVAN,data_all$CARAVAN,length)[1]
+# ^ total rate of CARAVAN
+tapply(data$CARAVAN,data$CARAVAN,length)[2]/tapply(data$CARAVAN,data$CARAVAN,length)[1]
+# ^ total training set rate of CARAVAN
+
+
+## Split 70/30 train/test
+set.seed(123)
+train0=sample(1:nrow(data), round(0.7*nrow(data)))
+summary(train0)
+str(train0)
+summary(train0)
+# without replacement better for validation sets
+# without replacement specified; default is REPLACE=FALSE (verified) 
+# Also, prob gives splits, or else with replacement will give more than weight desired for hold out:
+set.seed(123)
+# with replacement: train=sample(1:nrow(data), round(0.7*nrow(data)), replace=TRUE, prob=(0.7,0.3))
+train=sample(1:nrow(data), 0.7*nrow(data), replace=FALSE)
+summary(train)
+str(train)
+# both methods have similar results for target var:
+summary(data[train0,"CARAVAN"])
+summary(data[train,"CARAVAN"])
+# check train vs. test:
+summary(data[train,"CARAVAN"])
+summary(data[-train,"CARAVAN"])
+tapply(data[train,"CARAVAN"],data[train,"CARAVAN"],length)[2]/tapply(data[train,"CARAVAN"],data[train,"CARAVAN"],length)[1]
+# ^train set rate of CARAVAN
+tapply(data[-train,"CARAVAN"],data[-train,"CARAVAN"],length)[2]/tapply(data[-train,"CARAVAN"],data[-train,"CARAVAN"],length)[1]
+# ^test set rate of CARAVAN
+nrow(data[train,])
+nrow(data[-train,])
+
+
+# similar results in both sets, proceed with modelling...
+traindata=data[train,]
+testdata=data[-train,]
+head(traindata)
+str(traindata)
+names(traindata)
+# Check splits match parameters:
+nrow(traindata)/nrow(data)
+nrow(testdata)/nrow(data)
+
+## PCA
+#create subset from this selection procedure:
+str(traindata)
+
+
+## create categorical subset
+#create subset from this selection procedure:
+# a) to select multiple or ranges of variable names with a GUI
+vars2 <- select.list(names(traindata),multiple=TRUE,
+                     title='select your variable names',
+                     graphics=TRUE)
+
+#recorded manually going forward:
+# c("EMLEEF" , "MOSHOOFD" , "MGODRK" , "MGODPR" , "MGODOV" , "MGODGE" , "MRELGE" , "MRELSA" , "MRELOV" , "MFALLEEN" , "MFGEKIND" , "MFWEKIND" , "MOPLHOOG" , "MOPLMIDD" , "MOPLLAAG" , "MBERHOOG" , "MBERZELF" , "MBERBOER" , "MBERMIDD" , "MBERARBG" , "MBERARBO" , "MSKA" , "MSKB1" , "MSKB2" , "MSKC" , "MSKD" , "MHHUUR" , "MHKOOP" , "MAUT1" , "MAUT2" , "MAUT0" , "MZFONDS" , "MZPART" , "MINKM30" , "MINK3045" , "MINK4575" , "MINK7512" , "MINK123M" , "MINKGEM" , "MKOOPKLA" , "PWAPART" , "PWABEDR" , "PWALAND" , "PPERSAUT" , "PBESAUT" , "PMOTSCO" , "AAUT" , "PAANHANG" , "PTRACTOR" , "PWERKT" , "PBROM" , "PLEVEN" , "PPERSONG" , "PGEZONG" , "PWAOREG" , "PBRAND" , "PZEILPL" , "PPLEZIER" , "PFIETS" , "PINBOED" , "PBYSTAND" , "CARAVAN")
+vars2
+cat(vars2, sep=",")
+# get string for models:
+# c("STYPE","MGEMLEEF","MOSHOOFD","MGODRK","MGODPR","MGODOV","MGODGE","MRELGE","MRELSA","MRELOV","MFALLEEN","MFGEKIND","MFWEKIND","MOPLHOOG","MOPLMIDD","MOPLLAAG","MBERHOOG","MBERZELF","MBERBOER","MBERMIDD","MBERARBG","MBERARBO","MSKA","MSKB1","MSKB2","MSKC","MSKD","MHHUUR","MHKOOP","MAUT1","MAUT2","MAUT0","MZFONDS","MZPART","MINKM30","MINK3045","MINK4575","MINK7512","MINK123M","MINKGEM","MKOOPKLA","PWAPART","PWABEDR","PWALAND","PPERSAUT","PBESAUT","PMOTSCO","AAUT","PAANHANG","PTRACTOR","PWERKT","PBROM","PLEVEN","PPERSONG","PGEZONG","PWAOREG","PBRAND","PZEILPL","PPLEZIER","PFIETS","PINBOED","PBYSTAND","CARAVAN")
+# b) Create a subset of categorical data to use in modelscat(noquote(vars2),sep="+")
+# STYPE+MGEMLEEF+MOSHOOFD+MGODRK+MGODPR+MGODOV+MGODGE+MRELGE+MRELSA+MRELOV+MFALLEEN+MFGEKIND+MFWEKIND+MOPLHOOG+MOPLMIDD+MOPLLAAG+MBERHOOG+MBERZELF+MBERBOER+MBERMIDD+MBERARBG+MBERARBO+MSKA+MSKB1+MSKB2+MSKC+MSKD+MHHUUR+MHKOOP+MAUT1+MAUT2+MAUT0+MZFONDS+MZPART+MINKM30+MINK3045+MINK4575+MINK7512+MINK123M+MINKGEM+MKOOPKLA+PWAPART+PWABEDR+PWALAND+PPERSAUT+PBESAUT+PMOTSCO+AAUT+PAANHANG+PTRACTOR+PWERKT+PBROM+PLEVEN+PPERSONG+PGEZONG+PWAOREG+PBRAND+PZEILPL+PPLEZIER+PFIETS+PINBOED+PBYSTAND+CARAVAN
+data.cat = (data[,c("STYPE","MGEMLEEF","MOSHOOFD","MGODRK","MGODPR","MGODOV","MGODGE","MRELGE","MRELSA","MRELOV","MFALLEEN","MFGEKIND","MFWEKIND","MOPLHOOG","MOPLMIDD","MOPLLAAG","MBERHOOG","MBERZELF","MBERBOER","MBERMIDD","MBERARBG","MBERARBO","MSKA","MSKB1","MSKB2","MSKC","MSKD","MHHUUR","MHKOOP","MAUT1","MAUT2","MAUT0","MZFONDS","MZPART","MINKM30","MINK3045","MINK4575","MINK7512","MINK123M","MINKGEM","MKOOPKLA","PWAPART","PWABEDR","PWALAND","PPERSAUT","PBESAUT","PMOTSCO","AAUT","PAANHANG","PTRACTOR","PWERKT","PBROM","PLEVEN","PPERSONG","PGEZONG","PWAOREG","PBRAND","PZEILPL","PPLEZIER","PFIETS","PINBOED","PBYSTAND","CARAVAN")])
+#could also use var2 instead of var string
+str(data.cat)
+traindata.cat=data.cat[train,]
+testdata.cat=data.cat[-train,]
+
+## Create numeric subset
+str(traindata)
+# a) to select multiple or ranges of variable names with a GUI
+vars <- select.list(names(traindata),multiple=TRUE,
+                    title='select your variable names',
+                    graphics=TRUE)
+# b) Create a subset of numeric data to use in models
+cat(vars, sep=",")
+# c("MAANTHUI","MGEMOMV","AWAPART","AWABEDR","AWALAND","APERSAUT","ABESAUT","AMOTSCO","AVRAAUT","AAANHANG","ATRACTOR","AWERKT","ABROM","ALEVEN","APERSONG","AGEZONG","AWAOREG","ABRAND","AZEILPL","APLEZIER","AFIETS","AINBOED","ABYSTAND")
+# get string for models:
+cat(noquote(vars),sep="+")
+# MAANTHUI+MGEMOMV+AWAPART+AWABEDR+AWALAND+APERSAUT+ABESAUT+AMOTSCO+AVRAAUT+AAANHANG+ATRACTOR+AWERKT+ABROM+ALEVEN+APERSONG+AGEZONG+AWAOREG+ABRAND+AZEILPL+APLEZIER+AFIETS+AINBOED+ABYSTAND
+# get string to create subsets:
+cat((vars),sep=",")
+# MAANTHUI,MGEMOMV,AWAPART,AWABEDR,AWALAND,APERSAUT,ABESAUT,AMOTSCO,AVRAAUT,AAANHANG,ATRACTOR,AWERKT,ABROM,ALEVEN,APERSONG,AGEZONG,AWAOREG,ABRAND,AZEILPL,APLEZIER,AFIETS,AINBOED,ABYSTAND
+data.num = (data[,c("MAANTHUI","MGEMOMV","AWAPART","AWABEDR","AWALAND","APERSAUT","ABESAUT","AMOTSCO","AVRAAUT","AAANHANG","ATRACTOR","AWERKT","ABROM","ALEVEN","APERSONG","AGEZONG","AWAOREG","ABRAND","AZEILPL","APLEZIER","AFIETS","AINBOED","ABYSTAND")])
+#could also use 'var' instead of var string, but can't run quickly, requires choosing
+str(data.num)
+traindata.num=data.num[train,]
+testdata.num=data.num[-train,]
+str(testdata.num)
+str(traindata.num)
+
+### Run PCA on training set:
+pc = prcomp(~., data=data.num, subset=train, scale.=TRUE, center=TRUE)
+summary(pc)
+pc
+plot(pc, type="l")
+biplot(pc, cex=c(0.5,0.75))
+apply(traindata,2,sd)
+
+# create train dataset with pc components (top 10 chosen from scree)
+pc2=pc$x[,1:10]
+traindata.pc = data.frame(traindata.cat,pc2)
+head(traindata.pc)
+
+
+# Run PCA on test set:
+pc = prcomp(~., data=testdata.num, scale.=TRUE, center=TRUE)
+summary(pc)
+pc
+plot(pc, type="l")
+biplot(pc, cex=c(0.5,0.75))
+apply(testdata,2,sd)
+
+# create test dataset with pc components (top 10 chosen from scree)
+pc3=pc$x[,1:10]
+testdata.pc = data.frame(testdata.cat,pc3)
+head(testdata.pc)
+
+
+
+# stopped here >>>>>>>>>
+###### BELOW STILL NOT WORKING Performance table seems to be calculating off, need to check manually)
+
+### Load algo for performance metrics and WekaR ###
+library(RWeka)
+
+## test logit pc vs. not 
+
+RandCom <- make_Weka_classifier("weka/classifiers/meta/RandomCommittee")
+J48 <- make_Weka_classifier("weka/classifiers/trees/J48")
+NB <- make_Weka_classifier("weka/classifiers/bayes/NaiveBayes")
+
+
+#### initial model for tuning indexing for performance table ###
+# -> Inputs
+algo = NB
+form= "CARAVAN ~ ."
+data= traindata
+newdata = testdata
+mod = algo(as.formula(form),data=data)
+adj = +1
+
+#validation
+e1 <- evaluate_Weka_classifier(mod, newdata = newdata, complexity = TRUE,
+                               seed = 123, class = TRUE)
+e1
+pa = e1$detailsClass[,c("falsePositiveRate","precision", "areaUnderROC")]
+Accuracy = e1$details["pctCorrect"]
+mysummary = cbind(Accuracy,pa)
+# extract specific performance metrics for calculation and graphics
+# for tuning indexes to match if off of desired:
+e1String = strsplit(e1$string, split=" ")[[1]]
+round(length(e1String)-(568-395))+adj
+e1String
+e1String[round(length(e1String)-(568-395))]
+# e1String = total string vector of validation output
+TP0 = as.numeric(e1String[round(length(e1String)-(568-395))+adj]) #.761
+TP1 = as.numeric(e1String[round(length(e1String)-(568-450))+adj]) #.574
+TP = as.numeric(e1String[round(length(e1String)-(568-493))+adj])  #.750
+FP0 = as.numeric(e1String[round(length(e1String)-(568-399))+adj])
+FP1 = as.numeric(e1String[round(length(e1String)-(568-454))+adj])
+FP = as.numeric(e1String[round(length(e1String)-(568-497))+adj])
+Prc0 = as.numeric(e1String[round(length(e1String)-(568-403))+adj]) # .967
+Prc1 = as.numeric(e1String[round(length(e1String)-(568-458))+adj])
+Prc = as.numeric(e1String[round(length(e1String)-(568-501))+adj]) #.918
+AUC0 = as.numeric(e1String[round(length(e1String)-(568-423))+adj])
+AUC1 = as.numeric(e1String[round(length(e1String)-(568-478))+adj])
+AUC = as.numeric(e1String[round(length(e1String)-(568-521))+adj]) #.723
+MROC = ((1-FP)+TP)/2
+MPrf = (TP+Prc)/2
+MROC0 = ((1-FP0)+TP0)/2
+MPrf0 = (TP0+Prc0)/2
+MROC1 = ((1-FP1)+TP1)/2
+MPrf1 = (TP1+Prc1)/2
+Perf_Index = rbind(MPrf0,MPrf1,MPrf)
+ROC_Index = rbind(MROC0,MROC1,MROC)
+Performance = data.frame(ROC_Index,Perf_Index, row.names = c(0,1,"total"))
+check0 = data.frame(FP0,FP1)
+check = round(mysummary[2,2],3)-check0[,2]
+check_zero= data.frame(check=rep(check,3))
+Performance2 = data.frame(Performance,check_zero)
+fun = list(ConfMatrix=e1$confusionMatrix, Performance=Performance2, summary=mysummary)
+fun
+
+
+#### CLEAN function with performance table summaries ###
+WekModel.splt = function(algo, form, data, newdata, adj=0) {
+  # algo = Weka algorithm
+  # form = formula (requires quotations)
+  # data = training dataset
+  # newdata = test set
+  # opt = option letter = option from Weka WOW; opt1 required, (requires quotations)
+  # adj = try 1,-1 if 'check' column is not zero, indicates indexes are off for Performance table
+  # IMPORTANT: all zero sided confusion matrixes will make Performance table invalid
+  # -> Inputs
+  
+  mod = algo(as.formula(form),data=data)
+  #validation
+  e1 <- evaluate_Weka_classifier(mod, newdata = newdata, complexity = TRUE,
+                                 seed = 123, class = TRUE)
+  pa = e1$detailsClass[,c("falsePositiveRate","precision", "areaUnderROC")]
+  Accuracy = e1$details["pctCorrect"]
+  mysummary = cbind(Accuracy,pa)
+  # extract specific performance metrics for calculation and graphics
+  # for tuning indexes to match if off of desired:
+  e1String = strsplit(e1$string, split=" ")[[1]]
+  # e1String = total string vector of validation output
+  TP0 = as.numeric(e1String[round(length(e1String)-(568-395))+adj]) #.761
+  TP1 = as.numeric(e1String[round(length(e1String)-(568-450))+adj]) #.574
+  TP = as.numeric(e1String[round(length(e1String)-(568-493))+adj])  #.750
+  FP0 = as.numeric(e1String[round(length(e1String)-(568-399))+adj])
+  FP1 = as.numeric(e1String[round(length(e1String)-(568-454))+adj])
+  FP = as.numeric(e1String[round(length(e1String)-(568-497))+adj])
+  Prc0 = as.numeric(e1String[round(length(e1String)-(568-403))+adj]) # .967
+  Prc1 = as.numeric(e1String[round(length(e1String)-(568-458))+adj])
+  Prc = as.numeric(e1String[round(length(e1String)-(568-501))+adj]) #.918
+  AUC0 = as.numeric(e1String[round(length(e1String)-(568-423))+adj])
+  AUC1 = as.numeric(e1String[round(length(e1String)-(568-478))+adj])
+  AUC = as.numeric(e1String[round(length(e1String)-(568-521))+adj]) #.723
+  MROC = ((1-FP)+TP)/2
+  MPrf = (TP+Prc)/2
+  MROC0 = ((1-FP0)+TP0)/2
+  MPrf0 = (TP0+Prc0)/2
+  MROC1 = ((1-FP1)+TP1)/2
+  MPrf1 = (TP1+Prc1)/2
+  Perf_Index = rbind(MPrf0,MPrf1,MPrf)
+  ROC_Index = rbind(MROC0,MROC1,MROC)
+  Performance = data.frame(ROC_Index,Perf_Index, row.names = c(0,1,"total"))
+  check0 = data.frame(FP0,FP1)
+  check = round(mysummary[2,2],3)-check0[,2]
+  check_zero= check=rep(check,3)
+  Performance2 = data.frame(Performance,check_zero)
+  fun = list(ConfMatrix=e1$confusionMatrix, Performance=Performance2, summary=mysummary)
+  return(fun) }
+args(WekModel.splt)
+
+
+## Test PCA vs. nonPCA datasets:
+WekModel.splt(algo = NB, form="CARAVAN ~ .",data=traindata, newdata = testdata, adj=1)
+((162/nrow(traindata))+(.129))/2
+WekModel.splt(algo = NB, form="CARAVAN ~ .",data=traindata.pc, newdata = testdata.pc, adj=0 )
+((145/nrow(traindata))+(.134))/2
+# PCA perfomed better, modelling other methods:
+WekModel.splt(algo = NB, form="CARAVAN ~ .",data=traindata.pc, newdata = testdata.pc )
+
+### Clean step-through model for summary performance tables with SPLIT sets: ###
+
+# -> Inputs
+algo = NB
+form= "CARAVAN ~ ."
+data= traindata
+newdata = testdata
+adj = +1
+mod = algo(as.formula(form),data=data)
+
+
+#validation
+e1 <- evaluate_Weka_classifier(mod, newdata = newdata, complexity = TRUE,
+                               seed = 123, class = TRUE)
+e1
+pa = e1$detailsClass[,c("falsePositiveRate","precision", "areaUnderROC")]
+Accuracy = e1$details["pctCorrect"]
+mysummary = cbind(Accuracy,pa)
+# extract specific performance metrics for calculation and graphics
+# for tuning indexes to match if off of desired:
+e1String = strsplit(e1$string, split=" ")[[1]]
+round(length(e1String)-(568-395))+adj
+e1String
+e1String[round(length(e1String)-(568-395))]
+# e1String = total string vector of validation output
+TP0 = as.numeric(e1String[round(length(e1String)-(568-395))+adj]) #.761
+TP1 = as.numeric(e1String[round(length(e1String)-(568-450))+adj]) #.574
+TP = as.numeric(e1String[round(length(e1String)-(568-493))+adj])  #.750
+FP0 = as.numeric(e1String[round(length(e1String)-(568-399))+adj])
+FP1 = as.numeric(e1String[round(length(e1String)-(568-454))+adj])
+FP = as.numeric(e1String[round(length(e1String)-(568-497))+adj])
+Prc0 = as.numeric(e1String[round(length(e1String)-(568-403))+adj]) # .967
+Prc1 = as.numeric(e1String[round(length(e1String)-(568-458))+adj])
+Prc = as.numeric(e1String[round(length(e1String)-(568-501))+adj]) #.918
+AUC0 = as.numeric(e1String[round(length(e1String)-(568-423))+adj])
+AUC1 = as.numeric(e1String[round(length(e1String)-(568-478))+adj])
+AUC = as.numeric(e1String[round(length(e1String)-(568-521))+adj]) #.723
+MROC = ((1-FP)+TP)/2
+MPrf = (TP+Prc)/2
+MROC0 = ((1-FP0)+TP0)/2
+MPrf0 = (TP0+Prc0)/2
+MROC1 = ((1-FP1)+TP1)/2
+MPrf1 = (TP1+Prc1)/2
+Perf_Index = rbind(MPrf0,MPrf1,MPrf)
+ROC_Index = rbind(MROC0,MROC1,MROC)
+Performance = data.frame(ROC_Index,Perf_Index, row.names = c(0,1,"total"))
+check0 = data.frame(FP0,FP1)
+check = round(mysummary[2,2],3)-check0[,2]
+check_zero= data.frame(check=rep(check,3))
+Performance2 = data.frame(Performance,check_zero)
+fun = list(ConfMatrix=e1$confusionMatrix, Performance=Performance2, summary=mysummary)
+fun
+
+
+
+
+
+
+
+
+
+
+
+
+
