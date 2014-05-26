@@ -1,0 +1,78 @@
+  rm(list=ls())
+	set.seed(123)
+	library(plyr)
+	library(xlsx)
+	library(sampling)
+	library(pls)
+	library(MASS)
+	library(kernlab)
+	library(ROCR)
+	library(caret)
+	setwd("C:/Users/saali/Desktop/School/Predict-412/Project/R")
+	# load data and check data integrity
+  	data(ticdata)
+	nrow(ticdata)
+	tic <- ticdata[1:5822,] # Select training data only
+	head(tic)
+	rows <- nrow(tic)
+	compcases  <- sum(complete.cases(tic))
+	# if this logical test returns false, data is missing.
+  	rows==compcases
+	# there is no missing data
+  	###################################################################################
+	summary(tic)
+	# there are 348 positive responses in the total set
+  	posinst <- nrow(tic[tic$CARAVAN=="insurance",])
+	# base rate for positive response (CARAVAN=1) is ~ 6%
+  	baserate <- round(posinst/nrow(tic), digits=4)
+	baserate
+	# for 70/30 split, the test set should have 104 positive responses, /- 1
+  	pos_test_obs <- trunc(baserate*nrow(tic)*.3)
+	pos_test_obs
+	###################################################################################
+	# partition into train and test
+  	# stratify first, otherwise could be easy for one set to get no pos responses
+  	# calculate how to stratify to get equal representation in train and test:
+  	# how many positive instances should the train set have?
+  	postrain <- trunc(posinst*.7)
+	postrain
+	# how many negative instances should the train set have?
+  	negtrain <- trunc((rows-posinst)*.7)
+	negtrain
+	# add a stratum column which will be used to split the set into train and test:
+  	strata <- strata(tic, stratanames=c("CARAVAN"), size=c(negtrain,postrain), method="srswor")
+	# split into train and test
+  	tic.train <- tic[rownames(tic) %in% strata$ID_unit,]
+	tic.test <- tic[!rownames(tic) %in% strata$ID_unit,]
+	# here is how the respective sets look:
+  	table(tic.train$CARAVAN)
+	table(tic.test$CARAVAN)
+	# after stratification, the test set is 2 rows longer than the strict 70% calc, and has 105 positive responses rather than the raw calc of 104, which is fine:
+  	nrow(tic.train)
+	nrow(tic.test)
+	# Many algorithms won't do well if the data is presented one class then the other in the train set
+  	tic.train   <-  tic.train [sample(nrow(tic.train)),]
+
+	# set classification thresholds
+  	threshold  <- seq(.1, 0.9, 0.1)
+	###################################################################################
+  #####################################################################################
+  ##############################PCA Selected variables#################################
+  ## fit the PCA
+  pc.train <- prcomp(tic.train[, 2:3,20:85])
+  pc.test <- predict(pc, newdata = tic.test[, 2:3,20:85])
+  ## create data frame 
+  train <- data.frame(caravan = tic.train[, "CARAVAN"], pc.train$x)
+  test <- data.frame(caravan = tic.test[, "CARAVAN"], pc.test)
+ 
+  ## ...and fit the model
+  # naive bayes
+  library(e1071)
+  NB <- naiveBayes(caravan ~ PC1,PC2, data = train)
+  NB
+  pred <- predict(NB, newdata = test, type = "class")
+  pred
+  predictions  <- ifelse(pred=="insurance", 1, 0)
+  table(Actual=ytest, predicted=predictions)
+  
+  
