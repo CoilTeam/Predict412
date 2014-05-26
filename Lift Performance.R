@@ -88,7 +88,6 @@ library(unbalanced)
 #balance the dataset
 # 'type' parameter:  The argument type can take the following values: "ubOver" (over-sampling), "ubUnder" (undersampling), "ubSMOTE" (SMOTE), "ubOSS" (One Side Selection), "ubCNN" (Condensed Nearest Neighbor), "ubENN" (Edited Nearest Neighbor), "ubNCL" (Neighborhood Cleaning Rule),"ubTomek" (Tomek Link)
 ytrainfactor <- as.factor(ytrain)
-ytestfactor <- as.factor(ytrain)
 balancedData<- ubBalance(as.data.frame(xtrain),ytrainfactor, type="ubOver")
 bal.tic.train<-cbind(balancedData$X,balancedData$Y)
 head(bal.tic.train)
