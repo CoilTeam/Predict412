@@ -1,0 +1,259 @@
+##################################################################################
+### 1)  Seed only for balance; Run the original data splits and preparation on the transformed data set
+##################################################################################E
+rm(list=ls())
+library(plyr)
+library(xlsx)
+library(sampling)
+library(pls) 
+library(MASS)
+library(kernlab)
+library(ROCR)
+library(caret)
+
+#Set WD (Set target where csv files are located)
+setwd("D:/R Working Directory/Predict412/teamproject")
+
+## This data set replaces the original 9822 and includes the selected subset vars including all interaction variables
+ticdata = read.csv("ticdata_subset.csv", header= TRUE)
+ticdata = ticdata[,-1]
+ticdata[1:5,1:5]
+dim(ticdata) # confirm 9822 x 157
+class(ticdata) # confirm df, if not transform with ticdata = as.data.frame(ticdata)
+
+### a.  Split 5822 and 4000 as Train and Test sets
+test.set = ticdata[5823:nrow(ticdata),]
+nrow(test.set) # confirm 4000
+tic <- ticdata[1:5822,] # Select training data only
+head(tic)
+rows <- nrow(tic)
+rows
+compcases <- sum(complete.cases(tic))
+# if this logical test returns false, data is missing.
+rows==compcases
+# there is no missing data
+
+### b.  Split 5822 70/30 Train/Validate stratified on CARAVAN
+summary(tic[,1])
+# there are 348 positive responses in the total set
+posinst <- nrow(tic[tic$CARAVAN=="insurance",])
+posinst
+# base rate for positive response (CARAVAN=1) is ~ 6%
+baserate <- round(posinst/nrow(tic), digits=4)
+baserate
+# for 70/30 split, the test set should have 104 positive responses, +/- 1
+pos_test_obs <- trunc(baserate*nrow(tic)*.3)
+pos_test_obs
+
+# partition into train and test
+# stratify first, otherwise could be easy for one set to get no pos responses
+# calculate how to stratify to get equal representation in train and test:
+# how many positive instances should the train set have?
+postrain <- trunc(posinst*.7)
+postrain
+# how many negative instances should the train set have?
+negtrain <- trunc((rows-posinst)*.7)
+negtrain
+# add a stratum column which will be used to split the set into train and test:
+strata <- strata(tic, stratanames=c("CARAVAN"), size=c(negtrain,postrain), method="srswor")
+# split into train and test
+tic.train <- tic[rownames(tic) %in% strata$ID_unit,]
+tic.test <- tic[!rownames(tic) %in% strata$ID_unit,]
+# here is how the respective sets look:
+table(tic.train$CARAVAN)
+table(tic.test$CARAVAN)
+table(tic.train$CARAVAN)[1]/sum(table(tic.train$CARAVAN)[1:2])
+table(tic.test$CARAVAN)[1]/sum(table(tic.test$CARAVAN)[1:2])
+# after stratification, the test set is 2 rows longer than the strict 70% calc, and has 105 positive responses rather than the raw calc of 104, which is fine:
+trainsize <- nrow(tic.train)
+testsize <- nrow(tic.test)
+trainsize
+testsize
+# Many algorithms won't do well if the data is presented one class then the other in the train set
+tic.train <- tic.train [sample(nrow(tic.train)),]
+# check = data.frame(names(train.bal.total), names(tic.test))
+# nrow(tic.train)
+
+# break out response and predictors for those methods that need them separated
+ytrain <- ifelse(tic.train$CARAVAN=="insurance",1,0)
+which(colnames(tic.train)=="CARAVAN")
+xtrain <- as.data.frame(tic.train[,-1])
+ytest <- ifelse(tic.test$CARAVAN=="insurance",1,0)
+xtest <- as.data.frame(tic.test[,-1])
+# save number of true positive responses in the test set for use in table later
+val_truepos <- sum(ytest)
+# make a formula for general use across methods
+ticvars <- setdiff(colnames(tic.train),list('CARAVAN'))
+#ticvars
+# ticformula <- as.formula(paste('CARAVAN=="CARAVAN"', paste(ticvars,collapse=' + '),sep=' ~ '))
+ticformula <- as.formula(paste('CARAVAN', paste(ticvars,collapse=' + '),sep=' ~ '))
+ticformula
+
+# set up test data
+ytestfull <- test.set$CARAVAN
+head(ytestfull)
+ytestfull_binary <- ifelse(ytestfull=="noinsurance", 0,1)
+test_truepos <- sum(ytestfull_binary)
+head(ytestfull_binary)
+
+which(colnames(test.set)=="CARAVAN")
+xtestfull <- test.set[, -1]
+
+### c. Scoring
+# set up repository to collect results
+trainpreds <- as.data.frame(ytrain)
+testpreds <- as.data.frame(ytest)
+colnames(trainpreds) <- "trainy"
+colnames(testpreds) <- "testy"
+
+# set up metrics frame - run once
+combinedresults <- as.data.frame(c(1:7))
+combinedresults <- t(combinedresults)
+colnames(combinedresults) <- c("Data_Set", "Method_Name", "Test_Set_True_Positives", "TP_Identified", "Baseline", "Lift", "Balanced_Train_Set?")
+# kludge
+combinedresults <- combinedresults[-1,]
+combinedresults
+
+# CoIL asked for the 800 test observations with highest probability of being positive responses
+# The final holdout set has 4000 rows, so 800 is the top 20%
+# We want to do the same thing in our test set (to identify our best model)
+# our test set has 1748 rows
+valsetsize <- nrow(tic.test)
+valsetsize
+# we want to select our top 20%, so this is 350 predictions:
+topquintile_val <- round((valsetsize*.2), digits=0)
+topquintile_val
+# In any random sample of 350 observations from the data, there should be 20 or 21 positive responses:
+baserate*topquintile_test
+# this is very close to 21, so let's round it up
+Baseline_validation <- 21
+# the best model is the one that achieves the highest lift over 21 in the top 350
+# (350 with highest predicted Pr(yhat=1|X))
+
+# do the same thing for test data
+testsetsize <- nrow(test.set)
+testsetsize
+# we want to select our top 20%, so this is 800 predictions:
+topquintile_test <- round((testsetsize*.2), digits=0)
+topquintile_test
+# In any random sample of 800 observations from the data, there should be 47 or 48 positive responses:
+baserate*topquintile_test
+# round
+Baseline_test <- round(baserate*topquintile_test, digits=0)
+Baseline_test
+# the best model is the one that achieves the highest lift over 48 in the top 800
+# (800 with highest predicted Pr(yhat=1|X))
+
+# create functions to evaluate results
+evaluate_validation <- function(dataset, methodname, predictions, combinedresults){
+  lift <- as.data.frame(cbind(ytest, predictions))
+  colnames(lift) <- c("y", "yhat")
+  order <- lift[order(lift$yhat,decreasing=TRUE),]
+  liftcut <- order[1:350,]
+  TP <- sum(liftcut$y)
+  Lift <- TP-Baseline_validation
+  results <- as.vector(c(dataset, methodname, val_truepos, TP, Baseline_validation, Lift, BT))
+}
+
+evaluate_test <- function(dataset, methodname, predictions, combinedresults){
+  lift <- as.data.frame(cbind(ytestfull_binary, predictions))
+  colnames(lift) <- c("y", "yhat")
+  order <- lift[order(lift$yhat,decreasing=TRUE),]
+  liftcut <- order[1:800,]
+  TP <- sum(liftcut$y)
+  Lift <- TP-Baseline_test
+  results <- as.vector(c(dataset, methodname, test_truepos, TP, Baseline_test, Lift, BT))
+}
+
+### D.  Balance the Train set on CARAVAN 'insurance' class 
+# balance train data
+library(unbalanced)
+set.seed(123)
+### couldn't run the library on the plane, so tried without ####
+#balance the dataset
+# 'type' parameter: The argument type can take the following values: "ubOver" (over-sampling), "ubUnder" (undersampling), "ubSMOTE" (SMOTE), "ubOSS" (One Side Selection), "ubCNN" (Condensed Nearest Neighbor), "ubENN" (Edited Nearest Neighbor), "ubNCL" (Neighborhood Cleaning Rule),"ubTomek" (Tomek Link)
+ytrainfactor <- as.factor(ytrain)
+
+balancedData<- ubBalance(as.data.frame(xtrain),ytrainfactor, type="ubOver")
+bal.tic.train<-cbind(balancedData$X,balancedData$Y)
+head(bal.tic.train)
+bal.tic.train <- rename(bal.tic.train, c("balancedData$Y" = "CARAVAN"))
+bal.xtrain <- as.data.frame(balancedData$X)
+head(bal.xtrain)
+bal.ytrain <- bal.tic.train$CARAVAN
+summary(bal.tic.train)
+bal.ytrain <- bal.tic.train$CARAVAN
+bal.tic.train2 = bal.tic.train
+bal.tic.train2$CARAVAN[1:5]
+bal.tic.train2$CARAVAN = factor(bal.tic.train2$CARAVAN, labels=c("noinsurance","insurance"))
+bal.tic.train2$CARAVAN[1:5]
+str(bal.tic.train2[,"CARAVAN"])
+class(bal.tic.train2)
+names(bal.tic.train2)
+nrow(bal.tic.train2)
+count(bal.tic.train$CARAVAN)
+count(tic.train$CARAVAN)
+count(tic.test$CARAVAN)
+count(ytrain)
+
+##################################################################################
+# 2) Models
+##################################################################################
+###################################################################################
+# logistic regression via glm
+# next three lines pass the method name, whether balanced data was used, and the data set
+# to the final results table:
+
+# train/validate
+methodname <- "logistic regression via glm (R) w/Int"
+BT <- "Y"
+dataset <- "Train/Validate"
+
+tic.glm <- glm(ticformula, data=bal.tic.train, family=binomial)
+predictions <- predict(tic.glm, newdata=tic.test, type='response')
+results1 <- evaluate_validation(dataset, methodname, predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+# test
+methodname <- "logistic regression via glm (R) w/Int"
+BT <- "Y"
+dataset <- "Test"
+predictions <- predict(tic.glm, newdata=xtestfull, type='response')
+results1 <- evaluate_test(dataset, methodname, predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+###################################################################################
+# naive bayes
+library(e1071)
+# train/validate
+BT <- "Y"
+methodname <- "naive bayes w/Int"
+dataset <- "Train/Validate"
+tic.nb <- naiveBayes(bal.xtrain, bal.ytrain)
+predictions <- predict(tic.nb, newdata=xtest, type='raw')[,2]
+head(predictions)
+results1 <- evaluate_validation(dataset, methodname, predictions=predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+# on unbalanced data:
+BT <- "N"
+methodname <- "naive bayes w/Int"
+dataset <- "Train/Validate"
+tic.nb <- naiveBayes(xtrain, ytrain)
+predictions <- predict(tic.nb, newdata=xtest, type='raw')[,2]
+head(predictions)
+results1 <- evaluate_validation(dataset, methodname, predictions=predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+# test
+methodname <- "logistic regression via glm (R) w/Int"
+BT <- "N"
+dataset <- "Test"
+predictions <- predict(tic.nb, newdata=xtestfull, type='raw')[,2]
+results1 <- evaluate_test(dataset, methodname, predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+write.xlsx2(combinedresults, "combinedresults.xlsx", row.names=FALSE, col.names=TRUE)
