@@ -258,7 +258,7 @@ combinedresults <- rbind(combinedresults, results1)
 combinedresults
 
 # test
-methodname <- "logistic regression via glm (R) w/Int"
+methodname <- "naive bayes w/Int"
 BT <- "N"
 dataset <- "Test"
 predictions <- predict(tic.nb, newdata=xtestfull, type='raw')[,2]
