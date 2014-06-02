@@ -124,7 +124,7 @@ valsetsize
 topquintile_val <- round((valsetsize*.2), digits=0)
 topquintile_val
 # In any random sample of 350 observations from the data, there should be 20 or 21 positive responses:
-baserate*topquintile_test
+baserate*topquintile_val
 # this is very close to 21, so let's round it up
 Baseline_validation <- 21
 # the best model is the one that achieves the highest lift over 21 in the top 350
