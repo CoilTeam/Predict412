@@ -195,7 +195,16 @@ count(bal.tic.train$CARAVAN)
 count(tic.train$CARAVAN)
 count(tic.test$CARAVAN)
 count(ytrain)
-
+##################################################################################
+# deal with rank deficiency
+linearcomb <- findLinearCombos(bal.tic.train)
+remove <- linearcomb$remove
+bal.tic.train2 <- bal.tic.train[, -remove]
+findLinearCombos(bal.tic.train2)
+# recast ticformula
+ticvars <- setdiff(colnames(bal.tic.train2),list('CARAVAN'))
+ticformula2 <- as.formula(paste('CARAVAN', paste(ticvars,collapse=' + '),sep=' ~ '))
+ticformula2
 ##################################################################################
 # 2) Models
 ##################################################################################
@@ -209,7 +218,7 @@ methodname <- "logistic regression via glm (R) w/Int"
 BT <- "Y"
 dataset <- "Train/Validate"
 
-tic.glm <- glm(ticformula, data=bal.tic.train, family=binomial)
+tic.glm <- glm(ticformula2, data=bal.tic.train2, family=binomial)
 predictions <- predict(tic.glm, newdata=tic.test, type='response')
 results1 <- evaluate_validation(dataset, methodname, predictions, combinedresults)
 combinedresults <- rbind(combinedresults, results1)
