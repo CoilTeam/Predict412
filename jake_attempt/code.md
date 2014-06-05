@@ -8,23 +8,11 @@ library(corrgram)
 ```
 
 ```
-## Warning: package 'corrgram' was built under R version 3.0.3
-```
-
-```
 ## Loading required package: seriation
-```
-
-```
-## Warning: package 'seriation' was built under R version 3.0.3
 ```
 
 ```r
 library(vcd)
-```
-
-```
-## Warning: package 'vcd' was built under R version 3.0.3
 ```
 
 ```
@@ -37,28 +25,33 @@ library(randomForest)
 ```
 
 ```
-## Warning: package 'randomForest' was built under R version 3.0.3
-```
-
-```
 ## randomForest 4.6-7
 ## Type rfNews() to see new features/changes/bug fixes.
 ```
 
 ```r
 library(e1071)
-```
-
-```
-## Warning: package 'e1071' was built under R version 3.0.3
-```
-
-```r
 library(nnet)
+library(MASS)
+library(bootstrap)
+library(DAAG)
 ```
 
 ```
-## Warning: package 'nnet' was built under R version 3.0.3
+## Loading required package: lattice
+## 
+## Attaching package: 'lattice'
+## 
+## The following object is masked from 'package:seriation':
+## 
+##     panel.lines
+## 
+## 
+## Attaching package: 'DAAG'
+## 
+## The following object is masked from 'package:MASS':
+## 
+##     hills
 ```
 
 
@@ -275,186 +268,24 @@ head(dc)
 2.2 Data Exploration
 ----------------
 ### 2.2.1 Summary EDA
-
-```r
+```{.r}
 summary(dc)
 ```
-
-```
-##                         STYPE         MAANTHUI    MGEMOMV   MGEMLEEF   
-##  Lower class large families: 810   1      :5267   1: 284   20-30:  74  
-##  Middle class families     : 339   2      : 505   2:2131   30-40:1452  
-##  Traditional families      : 339   3      :  39   3:2646   40-50:3000  
-##  Large religous families   : 328   7      :   5   4: 693   50-60:1073  
-##  Modern, complete families : 278   4      :   2   5:  68   60-70: 193  
-##  Young and rising          : 251   5      :   1            70-80:  30  
-##  (Other)                   :3477   (Other):   3                        
-##                   MOSHOOFD         MGODRK          MGODPR    
-##  Family with grown ups:1563   0%      :3228   37 - 49%:1607  
-##  Average Family       : 886   1 - 10% :1599   50 - 62%:1501  
-##  Conservative families: 667   11 - 23%: 733   63 - 75%: 714  
-##  Living well          : 569   24 - 36%: 152   24 - 36%: 590  
-##  Successful hedonists : 552   37 - 49%:  66   76 - 88%: 564  
-##  Retired and Religeous: 550   50 - 62%:  18   11 - 23%: 396  
-##  (Other)              :1035   (Other) :  26   (Other) : 450  
-##       MGODOV          MGODGE          MRELGE          MRELSA    
-##  1 - 10% :2014   24 - 36%:1453   76 - 88%:1683   0%      :2448  
-##  0%      :2003   37 - 49%:1334   63 - 75%:1172   1 - 10% :2030  
-##  11 - 23%:1388   11 - 23%:1055   50 - 62%: 946   11 - 23%:1075  
-##  24 - 36%: 257   50 - 62%: 963   100%    : 794   24 - 36%: 159  
-##  37 - 49%: 132   0%      : 456   89 - 99%: 361   37 - 49%:  78  
-##  50 - 62%:  28   1 - 10% : 230   37 - 49%: 324   50 - 62%:  18  
-##  (Other) :   0   (Other) : 331   (Other) : 542   (Other) :  14  
-##       MRELOV         MFALLEEN        MFGEKIND        MFWEKIND   
-##  11 - 23%:1756   0%      :1757   24 - 36%:1498   37 - 49%:1137  
-##  0%      :1173   11 - 23%:1247   37 - 49%:1455   50 - 62%:1106  
-##  24 - 36%:1152   1 - 10% : 951   11 - 23%:1060   24 - 36%: 973  
-##  37 - 49%: 648   24 - 36%: 848   50 - 62%: 606   63 - 75%: 783  
-##  1 - 10% : 539   37 - 49%: 519   1 - 10% : 372   11 - 23%: 635  
-##  50 - 62%: 266   50 - 62%: 259   0%      : 371   76 - 88%: 351  
-##  (Other) : 288   (Other) : 241   (Other) : 460   (Other) : 837  
-##      MOPLHOOG        MOPLMIDD        MOPLLAAG        MBERHOOG   
-##  0%      :2147   37 - 49%:1426   50 - 62%:1009   0%      :1524  
-##  1 - 10% :1322   24 - 36%:1330   63 - 75%: 856   11 - 23%:1364  
-##  11 - 23%:1144   11 - 23%: 937   37 - 49%: 851   1 - 10% :1245  
-##  24 - 36%: 547   50 - 62%: 738   24 - 36%: 680   24 - 36%: 756  
-##  37 - 49%: 326   0%      : 423   11 - 23%: 667   37 - 49%: 397  
-##  50 - 62%: 187   1 - 10% : 383   76 - 88%: 640   50 - 62%: 249  
-##  (Other) : 149   (Other) : 585   (Other) :1119   (Other) : 287  
-##      MBERZELF        MBERBOER        MBERMIDD        MBERARBG   
-##  0%      :4171   0%      :4176   11 - 23%:1491   11 - 23%:1382  
-##  1 - 10% :1202   1 - 10% : 854   24 - 36%:1394   0%      :1167  
-##  11 - 23%: 348   11 - 23%: 487   37 - 49%: 953   24 - 36%:1167  
-##  50 - 62%:  52   24 - 36%: 143   0%      : 667   1 - 10% : 921  
-##  24 - 36%:  37   37 - 49%:  77   50 - 62%: 431   37 - 49%: 604  
-##  37 - 49%:  12   50 - 62%:  59   1 - 10% : 403   50 - 62%: 310  
-##  (Other) :   0   (Other) :  26   (Other) : 483   (Other) : 271  
-##      MBERARBO          MSKA           MSKB1           MSKB2     
-##  11 - 23%:1439   0%      :1738   11 - 23%:1783   11 - 23%:1676  
-##  24 - 36%:1109   1 - 10% :1569   1 - 10% :1480   24 - 36%:1175  
-##  1 - 10% : 980   11 - 23%:1198   0%      :1353   0%      : 990  
-##  0%      : 968   24 - 36%: 685   24 - 36%: 775   1 - 10% : 861  
-##  37 - 49%: 772   37 - 49%: 261   37 - 49%: 298   37 - 49%: 652  
-##  50 - 62%: 331   50 - 62%: 127   50 - 62%:  78   50 - 62%: 357  
-##  (Other) : 223   (Other) : 244   (Other) :  55   (Other) : 111  
-##        MSKC            MSKD           MHHUUR          MHKOOP    
-##  50 - 62%:1168   0%      :2607   0%      : 949   100%    : 949  
-##  37 - 49%:1159   1 - 10% :1563   100%    : 760   0%      : 760  
-##  24 - 36%:1090   11 - 23%: 852   11 - 23%: 717   76 - 88%: 724  
-##  11 - 23%: 870   24 - 36%: 441   24 - 36%: 593   63 - 75%: 604  
-##  63 - 75%: 487   37 - 49%: 223   89 - 99%: 532   1 - 10% : 530  
-##  0%      : 364   50 - 62%: 100   50 - 62%: 519   50 - 62%: 520  
-##  (Other) : 684   (Other) :  36   (Other) :1752   (Other) :1735  
-##       MAUT1           MAUT2           MAUT0          MZFONDS    
-##  63 - 75%:1663   0%      :1854   11 - 23%:1625   76 - 88%:1511  
-##  76 - 88%:1413   11 - 23%:1748   0%      :1450   50 - 62%: 974  
-##  50 - 62%:1210   1 - 10% :1468   24 - 36%:1066   63 - 75%: 875  
-##  100%    : 505   24 - 36%: 385   1 - 10% : 776   100%    : 852  
-##  37 - 49%: 448   37 - 49%: 301   37 - 49%: 587   89 - 99%: 699  
-##  89 - 99%: 261   50 - 62%:  56   50 - 62%: 174   37 - 49%: 357  
-##  (Other) : 322   (Other) :  10   (Other) : 144   (Other) : 554  
-##       MZPART         MINKM30         MINK3045        MINK4575   
-##  11 - 23%:1511   0%      :1304   37 - 49%:1356   24 - 36%:1215  
-##  37 - 49%: 992   11 - 23%:1094   24 - 36%:1147   11 - 23%:1165  
-##  0%      : 852   24 - 36%:1079   50 - 62%: 931   37 - 49%:1034  
-##  24 - 36%: 849   1 - 10% : 630   11 - 23%: 919   0%      : 891  
-##  1 - 10% : 699   37 - 49%: 599   0%      : 465   1 - 10% : 657  
-##  50 - 62%: 364   50 - 62%: 568   63 - 75%: 406   50 - 62%: 498  
-##  (Other) : 555   (Other) : 548   (Other) : 598   (Other) : 362  
-##      MINK7512        MINK123M        MINKGEM         MKOOPKLA   
-##  0%      :3246   0%      :4900   24 - 36%:1932   24 - 36%:1524  
-##  1 - 10% :1359   1 - 10% : 763   37 - 49%:1854   37 - 49%: 902  
-##  11 - 23%: 736   11 - 23%:  96   50 - 62%: 733   63 - 75%: 901  
-##  24 - 36%: 246   24 - 36%:  36   11 - 23%: 651   1 - 10% : 587  
-##  37 - 49%: 147   37 - 49%:  24   63 - 75%: 355   50 - 62%: 583  
-##  50 - 62%:  71   50 - 62%:   1   76 - 88%: 131   76 - 88%: 474  
-##  (Other) :  17   (Other) :   2   (Other) : 166   (Other) : 851  
-##       PWAPART            PWABEDR          PWALAND              PPERSAUT   
-##  f 0      :3482   f 0        :5740   f 0      :5702   f 0          :2845  
-##  f 50-99  :2128   f 50-99    :  30   f 200-499:  60   f 1000-4999  :2319  
-##  f 1-49   : 201   f 100-199  :  23   f 100-199:  57   f 500-999    : 613  
-##  f 100-199:  11   f 200-499  :  17   f 50-99  :   3   f 5000-9999  :  41  
-##  f 200-499:   0   f 1-49     :   7   f 1-49   :   0   f 10000-19999:   3  
-##  f 500-999:   0   f 1000-4999:   4   f 500-999:   0   f 200-499    :   1  
-##  (Other)  :   0   (Other)    :   1   (Other)  :   0   (Other)      :   0  
-##         PBESAUT            PMOTSCO              AAUT           PAANHANG   
-##  f 0        :5774   f 0        :5600   f 0        :5813   f 0      :5757  
-##  f 1000-4999:  35   f 200-499  : 136   f 1000-4999:   7   f 50-99  :  38  
-##  f 500-999  :  10   f 1000-4999:  49   f 200-499  :   1   f 1-49   :  19  
-##  f 5000-9999:   3   f 500-999  :  32   f 20000-?  :   1   f 100-199:   6  
-##  f 1-49     :   0   f 100-199  :   3   f 1-49     :   0   f 200-499:   1  
-##  f 50-99    :   0   f 5000-9999:   2   f 50-99    :   0   f 500-999:   1  
-##  (Other)    :   0   (Other)    :   0   (Other)    :   0   (Other)  :   0  
-##         PTRACTOR            PWERKT             PBROM     
-##  f 0        :5679   f 0        :5801   f 0        :5426  
-##  f 100-199  :  79   f 200-499  :   8   f 100-199  : 282  
-##  f 500-999  :  28   f 100-199  :   6   f 200-499  :  63  
-##  f 200-499  :  27   f 50-99    :   4   f 50-99    :  34  
-##  f 1000-4999:   9   f 1000-4999:   3   f 500-999  :  16  
-##  f 1-49     :   0   f 1-49     :   0   f 1000-4999:   1  
-##  (Other)    :   0   (Other)    :   0   (Other)    :   0  
-##          PLEVEN            PPERSONG         PGEZONG            PWAOREG    
-##  f 0        :5529   f 0        :5791   f 0      :5784   f 0        :5799  
-##  f 200-499  :  94   f 50-99    :  18   f 50-99  :  25   f 1000-4999:  19  
-##  f 100-199  :  84   f 100-199  :   4   f 100-199:  13   f 5000-9999:   2  
-##  f 1000-4999:  38   f 1-49     :   3   f 1-49   :   0   f 200-499  :   1  
-##  f 500-999  :  35   f 200-499  :   3   f 200-499:   0   f 500-999  :   1  
-##  f 50-99    :  28   f 1000-4999:   2   f 500-999:   0   f 1-49     :   0  
-##  (Other)    :  14   (Other)    :   1   (Other)  :   0   (Other)    :   0  
-##          PBRAND          PZEILPL            PPLEZIER          PFIETS    
-##  f 0        :2666   f 0      :5819   f 0        :5789   f 0      :5675  
-##  f 200-499  :1226   f 1-49   :   2   f 200-499  :  13   f 1-49   : 147  
-##  f 100-199  : 920   f 100-199:   1   f 1-49     :   5   f 50-99  :   0  
-##  f 50-99    : 535   f 50-99  :   0   f 50-99    :   5   f 100-199:   0  
-##  f 1-49     : 161   f 200-499:   0   f 100-199  :   5   f 200-499:   0  
-##  f 1000-4999: 155   f 500-999:   0   f 1000-4999:   3   f 500-999:   0  
-##  (Other)    : 159   (Other)  :   0   (Other)    :   2   (Other)  :   0  
-##       PINBOED          PBYSTAND    AWAPART  AWABEDR  AWALAND  APERSAUT
-##  f 0      :5777   f 0      :5740   0:3482   0:5740   0:5702   0:2845  
-##  f 1-49   :  18   f 200-499:  44   1:2334   1:  81   1: 120   1:2712  
-##  f 50-99  :  16   f 100-199:  22   2:   6   5:   1            2: 246  
-##  f 100-199:   6   f 50-99  :  15                              3:  12  
-##  f 200-499:   3   f 500-999:   1                              4:   5  
-##  f 500-999:   1   f 1-49   :   0                              6:   1  
-##  (Other)  :   1   (Other)  :   0                              7:   1  
-##  ABESAUT  AMOTSCO  AVRAAUT  AAANHANG ATRACTOR AWERKT   ABROM    ALEVEN  
-##  0:5774   0:5600   0:5813   0:5757   0:5679   0:5801   0:5426   0:5529  
-##  1:  40   1: 211   1:   6   1:  59   1: 105   1:  12   1: 382   1: 173  
-##  2:   4   2:  10   2:   2   2:   4   2:  29   2:   6   2:  14   2: 100  
-##  3:   3   8:   1   3:   1   3:   2   3:   3   3:   2            3:  11  
-##  4:   1                              4:   6   6:   1            4:   8  
-##                                                                 8:   1  
-##                                                                         
-##  APERSONG AGEZONG  AWAOREG  ABRAND   AZEILPL  APLEZIER AFIETS   AINBOED 
-##  0:5791   0:5784   0:5799   0:2666   0:5819   0:5789   0:5675   0:5777  
-##  1:  31   1:  38   1:  19   1:3017   1:   3   1:  31   1: 111   1:  44  
-##                    2:   4   2: 126            2:   2   2:  34   2:   1  
-##                             3:   7                     3:   2           
-##                             4:   3                                      
-##                             5:   2                                      
-##                             7:   1                                      
-##  ABYSTAND        CARAVAN    
-##  0:5740   noinsurance:5474  
-##  1:  81   insurance  : 348  
-##  2:   1                     
-##                             
-##                             
-##                             
-## 
-```
-
 
 ### 2.2.2 Univariate EDA
 
 ### Multivariate EDA: Explanatory vs Reponse
 #### Bar Plots
-```{.r, fig.width=4, fig.height=3}
-for(i in 1:85){
-  p <- ggplot(dc, aes(x=dc[,i], fill=CARAVAN)) +
-    geom_bar()
-  print(p)
+
+```r
+for (i in 1:85) {
+    p <- ggplot(dc, aes(x = dc[, i], fill = CARAVAN)) + geom_bar() + labs(x = names(dc)[i])
+    print(p)
 }
 ```
+
+![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-41.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-42.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-43.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-44.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-45.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-46.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-47.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-48.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-49.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-410.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-411.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-412.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-413.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-414.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-415.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-416.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-417.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-418.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-419.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-420.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-421.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-422.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-423.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-424.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-425.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-426.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-427.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-428.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-429.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-430.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-431.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-432.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-433.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-434.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-435.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-436.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-437.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-438.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-439.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-440.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-441.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-442.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-443.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-444.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-445.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-446.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-447.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-448.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-449.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-450.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-451.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-452.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-453.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-454.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-455.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-456.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-457.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-458.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-459.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-460.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-461.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-462.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-463.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-464.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-465.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-466.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-467.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-468.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-469.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-470.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-471.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-472.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-473.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-474.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-475.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-476.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-477.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-478.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-479.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-480.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-481.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-482.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-483.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-484.png) ![plot of chunk unnamed-chunk-4](figure/unnamed-chunk-485.png) 
+
 
 #### Corrgram
 _Works with continuous variables_
@@ -464,7 +295,7 @@ corrgram(dc[1:5,])
 #### Association Plot
 _Works with categorical variables_
 _Paused for the time being to increase speed_
-```{#r, fig.width=4, fig.height=4}
+```{.r, fig.width=4, fig.height=4}
 for(i in 1:85){
   t <- table(dc[,c(i, 86)])
   assoc(t, shade=T)
@@ -472,70 +303,16 @@ for(i in 1:85){
 ```
 
 ### Decision Tree EDA
-
-```r
-dt <- rpart(CARAVAN ~ ., dc)
+```{.r, fig.width=10, fig.height=10}
+dt <- rpart(CARAVAN~., dc)
 
 summary(dt)
-```
-
-```
-## Call:
-## rpart(formula = CARAVAN ~ ., data = dc)
-##   n= 5822 
-## 
-##   CP nsplit rel error xerror xstd
-## 1  0      0         1      0    0
-## 
-## Node number 1: 5822 observations
-##   predicted class=noinsurance  expected loss=0.05977  P(node) =1
-##     class counts:  5474   348
-##    probabilities: 0.940 0.060
-```
-
-```r
 printcp(dt)
-```
-
-```
-## 
-## Classification tree:
-## rpart(formula = CARAVAN ~ ., data = dc)
-## 
-## Variables actually used in tree construction:
-## character(0)
-## 
-## Root node error: 348/5822 = 0.06
-## 
-## n= 5822 
-## 
-##   CP nsplit rel error xerror xstd
-## 1  0      0         1      0    0
-```
-
-```r
 plotcp(dt)
-```
 
-![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-5.png) 
-
-```r
-
-plot(dt, uniform = TRUE, main = "Classification Tree for Caravan")
+plot(dt, uniform=TRUE, main="Classification Tree for Caravan")
+text(dt, use.n=TRUE, all=TRUE, cex=0.8)
 ```
-
-```
-## Error: fit is not a tree, just a root
-```
-
-```r
-text(dt, use.n = TRUE, all = TRUE, cex = 0.8)
-```
-
-```
-## Error: fit is not a tree, just a root
-```
-
 It looks like the tree cannot differentiate between the two response classes atm. Will need some way to amplify the signal, perhaps through oversampling.
 
 2.3 Data Selection
@@ -551,15 +328,13 @@ pca <- princomp(data[1:100,1:5])
 --------------------
 We begin by running the data through multiple algorithms on their respective default settings. This allows us to gather initial information on the performance of the algorithms as well as the dataset itself.
 ### Split Test/Train
-
-```r
+```{.r}
 set.seed(123)
-mask <- sample(5822, 4075)
+mask <- sample(5822,4075)
 
-train <- dc[mask, ]
-test <- dc[-mask, ]
+train <- dc[mask,]
+test <- dc[-mask,]
 ```
-
 
 ### Define Formula
 We have to define the formula that we're modeling upon first. We can do this by joining the column names together into a string, and then converting that string into the "formula" object.
@@ -574,102 +349,39 @@ print(f)
 ```
 
 ### Logistic Regression
-
-```r
-lrm <- glm(CARAVAN ~ ., train, family = binomial)
-```
-
-```
-## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
-```
-
-```r
+```{.r}
+lrm <- glm(CARAVAN~., train, family=binomial)
 lrm.pred <- predict(lrm, test)
 ```
-
-```
-## Error: factor MAANTHUI has new levels 8
-```
-
 As seen above, we get a few warnings, one of which informing us that the algorithm didn't converge. None of these warnings are fatal so we move on with the prediction phase to see what happens. However, we see here that for **some variables the classes used in training are not present in the test set**. Unfortunately this is a fatal error so we will have to move on.
 
 _We did convert some of variables to numeric but after a certain point this defeats the premise of the original conversion._
 
 ### Decision Tree
-
-```r
-dt <- rpart(CARAVAN ~ ., train, method = "class")
+```{.r}
+dt <- rpart(CARAVAN~., train, method='class')
 printcp(dt)
 ```
-
-```
-## 
-## Classification tree:
-## rpart(formula = CARAVAN ~ ., data = train, method = "class")
-## 
-## Variables actually used in tree construction:
-## character(0)
-## 
-## Root node error: 256/4075 = 0.063
-## 
-## n= 4075 
-## 
-##   CP nsplit rel error xerror xstd
-## 1  0      0         1      0    0
-```
-
 No nodes were created and no variables were used...
 
 ### Random Forest
-
-```r
-rf <- randomForest(CARAVAN ~ ., train)
+```{.r}
+rf <- randomForest(CARAVAN~., train)
 ```
-
-```
-## Error: Can not handle categorical predictors with more than 32 categories.
-```
-
 Error that it can't handle >32 categories. Convert and try with continuous data instead.
-
-```r
+```{.r}
 train.temp <- train
 train.temp$STYPE <- as.numeric(train.temp$STYPE)
-rf <- randomForest(CARAVAN ~ ., train.temp)
+rf <- randomForest(CARAVAN~., train.temp)
 rf
 ```
-
-```
-## 
-## Call:
-##  randomForest(formula = CARAVAN ~ ., data = train.temp) 
-##                Type of random forest: classification
-##                      Number of trees: 500
-## No. of variables tried at each split: 9
-## 
-##         OOB estimate of  error rate: 7.41%
-## Confusion matrix:
-##             noinsurance insurance class.error
-## noinsurance        3769        50     0.01309
-## insurance           252         4     0.98438
-```
-
 It runs now, which is good. However, it only correctly identifies 3 "insurance" observations correctly (in-sample). Let's try out-of-sample instead and see how the model fares.
-
-```r
+```{.r}
 test.temp <- test
 test.temp$STYPE <- as.numeric(test.temp$STYPE)
 rf.pred <- predict(rf, test.temp)
 table(test$CARAVAN, rf.pred)
 ```
-
-```
-##              rf.pred
-##               noinsurance insurance
-##   noinsurance        1637        18
-##   insurance            88         4
-```
-
 Unfortunately the model doesn't do well against the test data either. 
 
 ### Naive Bayes
@@ -679,40 +391,11 @@ nb <- naiveBayes(CARAVAN~., train)
 ```
 
 ### Neural Net
-
-```r
-nn <- nnet(CARAVAN ~ ., train, size = 1)
-```
-
-```
-## # weights:  657
-## initial  value 2423.323436 
-## iter  10 value 923.506306
-## iter  20 value 820.282895
-## iter  30 value 762.422357
-## iter  40 value 734.047803
-## iter  50 value 722.150546
-## iter  60 value 709.833005
-## iter  70 value 701.236874
-## iter  80 value 691.925175
-## iter  90 value 682.522072
-## iter 100 value 677.202265
-## final  value 677.202265 
-## stopped after 100 iterations
-```
-
-```r
-nn.pred <- predict(nn, test, type = "class")
+```{.r}
+nn <- nnet(CARAVAN~., train, size=1)
+nn.pred <- predict(nn, test, type='class')
 table(test$CARAVAN, nn.pred)
 ```
-
-```
-##              nn.pred
-##               noinsurance
-##   noinsurance        1655
-##   insurance            92
-```
-
 The neural has predicted all the test observations to be 'noinsurance'. This is probably due to the difference in class counts in the observations.
 
 ### Summary
@@ -731,171 +414,65 @@ None of the techniques used in this iteration provided satisfactory results. To 
 --------------------
 We discovered in iteration 1 that the ratio between the classes is just too large. The algorithms will simply settle on 0. We will need to oversample this dataset to even out the obervations between both classes. This way the algorithms will ignore the difference in sample size between the 2.
 ### Oversample
-
-```r
+```{.r}
 train.over <- train
 table(train.over$CARAVAN)
 ```
-
-```
-## 
-## noinsurance   insurance 
-##        3819         256
-```
-
 Before oversampling, there are 256 "insurance" and 3819 "noinsurance". To make them roughly the same we will repeat the "insurance" observations 14 times.
-
-```r
-temp <- train.over[grep("^insurance", train.over$CARAVAN), ]
-for (i in 1:14) {
-    train.over <- rbind(train.over, temp)
+```{.r}
+temp <- train.over[grep('^insurance', train.over$CARAVAN),]
+for(i in 1:14){
+  train.over <- rbind(train.over, temp)
 }
 table(train.over$CARAVAN)
 ```
-
-```
-## 
-## noinsurance   insurance 
-##        3819        3840
-```
-
 There are now 3840 "insurance" and 3819 "noinsurance". Let's try some of the same models again.
 
 ### Logistic Regression
-
-```r
-lrm <- glm(CARAVAN ~ ., train.over, family = binomial)
+```{.r}
+lrm <- glm(CARAVAN~., train.over, family=binomial)
 ```
-
-```
-## Warning: glm.fit: algorithm did not converge
-## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
-```
-
 Still the same errors as before: "algorithm did not converge"
-
-```r
-lrm.pred <- predict(lrm, test, type = "response")
-```
-
-```
-## Error: factor MAANTHUI has new levels 8
-```
-
-```r
+```{.r}
+lrm.pred <- predict(lrm, test, type='response')
 table(lrm.pred, test$CARAVAN)
 ```
-
-```
-## Error: object 'lrm.pred' not found
-```
-
 Nope, not even working.
 
 ### Decision Tree
-
-```r
-dt <- rpart(CARAVAN ~ ., train.over, method = "class")
+```{.r}
+dt <- rpart(CARAVAN~., train.over, method='class')
 printcp(dt)
 ```
-
-```
-## 
-## Classification tree:
-## rpart(formula = CARAVAN ~ ., data = train.over, method = "class")
-## 
-## Variables actually used in tree construction:
-## [1] MHHUUR   PBRAND   PPERSAUT STYPE   
-## 
-## Root node error: 3819/7659 = 0.5
-## 
-## n= 7659 
-## 
-##      CP nsplit rel error xerror  xstd
-## 1 0.371      0      1.00   1.03 0.011
-## 2 0.042      1      0.63   0.63 0.011
-## 3 0.011      2      0.59   0.58 0.010
-## 4 0.010      4      0.56   0.56 0.010
-```
-
 Much better this time. 4 variables were used in tree construction this time.
-
-```r
-dt.pred <- predict(dt, test, type = "class")
+```{.r}
+dt.pred <- predict(dt, test, type='class')
 table(dt.pred, test$CARAVAN)
 ```
-
-```
-##              
-## dt.pred       noinsurance insurance
-##   noinsurance        1130        28
-##   insurance           525        64
-```
-
 Unfortunately the results still aren't the best. The false negative rate is huge 525/1655 and the false positive rate is 28/92. 
 
 ### Random Forest
-
-```r
+```{.r}
 train.temp <- train.over
 train.temp$STYPE <- as.numeric(train.temp$STYPE)
-rf <- randomForest(CARAVAN ~ ., train.temp)
+rf <- randomForest(CARAVAN~., train.temp)
+rf
 ```
-
 These in-sample results are great! This time the forest was able to correctly identify all of the "insurance" observations (though they are oversampled).
-
-```r
+```{.r}
 test.temp <- test
 test.temp$STYPE <- as.numeric(test.temp$STYPE)
 rf.pred <- predict(rf, test.temp)
 table(test$CARAVAN, rf.pred)
 ```
-
-```
-##              rf.pred
-##               noinsurance insurance
-##   noinsurance        1573        82
-##   insurance            83         9
-```
-
 When looking at the test set, unfortunately, the out-of-samply accuracy decreases drastically...
 
 ### Neural Net
-
-```r
-nn <- nnet(CARAVAN ~ ., train.over, size = 1)
-```
-
-```
-## # weights:  657
-## initial  value 5316.038904 
-## iter  10 value 4147.771607
-## iter  20 value 3739.432462
-## iter  30 value 3495.464751
-## iter  40 value 3329.975539
-## iter  50 value 3254.903831
-## iter  60 value 3211.337072
-## iter  70 value 3176.527704
-## iter  80 value 3148.131185
-## iter  90 value 3109.653196
-## iter 100 value 3107.632459
-## final  value 3107.632459 
-## stopped after 100 iterations
-```
-
-
-```r
-nn.pred <- predict(nn, test, type = "class")
+```{.r}
+system.time(nn <- nnet(CARAVAN~., train.over, size=1))
+nn.pred <- predict(nn, test, type='class')
 table(test$CARAVAN, nn.pred)
 ```
-
-```
-##              nn.pred
-##               insurance noinsurance
-##   noinsurance       166        1489
-##   insurance          20          72
-```
-
 
 
 Modeling Iter. 3
@@ -904,110 +481,50 @@ Now that we have the algorithms working due to oversampling, we're running into 
 
 ### Feature selection via DT EDA
 MHHUUR   PBRAND   PPERSAUT STYPE
-
-```r
-dt_cols <- c("CARAVAN", "MHHUUR", "PPERSAUT", "STYPE")
+```{.r}
+dt_cols <- c('CARAVAN', 'MHHUUR', 'PPERSAUT', 'STYPE')
 train.dt <- train.over[, dt_cols]
 test.dt <- test[, dt_cols]
 ```
 
-
 ### Logistic Regression
-
-```r
-lrm <- glm(CARAVAN ~ ., train.dt, family = binomial)
+```{.r}
+lrm <- glm(CARAVAN~., train.dt, family=binomial)
 ```
-
 No more "algorithm did not converge" warning.
-
-```r
+```{.r}
 lrm.pred <- predict(lrm, test.dt)
-lrm.pred <- 1 * (lrm.pred >= 0.5)
+lrm.pred <- 1*(lrm.pred >= 0.5)
 table(lrm.pred, test$CARAVAN)
 ```
-
-```
-##         
-## lrm.pred noinsurance insurance
-##        0        1277        43
-##        1         378        49
-```
-
 Working, but not that great.
 
 ### Decision Tree
-
-```r
-dt <- rpart(CARAVAN ~ ., train.dt, method = "class")
+```{.r}
+dt <- rpart(CARAVAN~., train.dt, method='class')
 printcp(dt)
 ```
-
-```
-## 
-## Classification tree:
-## rpart(formula = CARAVAN ~ ., data = train.dt, method = "class")
-## 
-## Variables actually used in tree construction:
-## [1] MHHUUR   PPERSAUT STYPE   
-## 
-## Root node error: 3819/7659 = 0.5
-## 
-## n= 7659 
-## 
-##      CP nsplit rel error xerror  xstd
-## 1 0.371      0      1.00   1.03 0.011
-## 2 0.042      1      0.63   0.63 0.011
-## 3 0.012      2      0.59   0.61 0.011
-## 4 0.010      5      0.55   0.59 0.010
-```
-
 Not surprisingly, the DT still works and uses all four of the variables we selected out.
-
-```r
-dt.pred <- predict(dt, test, type = "class")
+```{.r}
+dt.pred <- predict(dt, test, type='class')
 table(dt.pred, test$CARAVAN)
 ```
-
-```
-##              
-## dt.pred       noinsurance insurance
-##   noinsurance        1039        26
-##   insurance           616        66
-```
-
 And also not too surprisingly, the results are a bit worse give we removed a ton of information. The false negative rate is now a huge 649/1655 and the false positive rate is 21/92. 
 
 ### Random Forest
-
-```r
+```{.r}
 train.temp <- train.dt
 train.temp$STYPE <- as.numeric(train.temp$STYPE)
-rf <- randomForest(CARAVAN ~ ., train.temp)
+rf <- randomForest(CARAVAN~., train.temp)
+rf
 ```
 
-
-
-```r
+```{.r}
 test.temp <- test.dt
 test.temp$STYPE <- as.numeric(test.temp$STYPE)
 rf.pred <- predict(rf, test.temp)
-```
-
-```
-## Error: New factor levels not present in the training data
-```
-
-```r
 table(test$CARAVAN, rf.pred)
 ```
-
-```
-##              rf.pred
-##               noinsurance insurance
-##   noinsurance        1573        82
-##   insurance            83         9
-```
-
 
 ### Summary
 It looks like doing a feature selection through decision tree EDA just isn't that great. Let's explore some other FS techniques.
@@ -1015,178 +532,99 @@ It looks like doing a feature selection through decision tree EDA just isn't tha
 
 Modeling Iter. 4
 ----------------
+First, let's explore undersampling.
 While oversampling did balance our dataset out enough to enable actual modeling, undersampling may be better due to the underlying methodology. Instead of producing fake date we will randomly sample the 'noinsurance' class to even out the balance.
 ### Undersample
-
-```r
-train.over <- train
-table(train.over$CARAVAN)
+```{.r}
+train.under <- train
+table(train.under$CARAVAN)
 ```
+Like before, we start off with there are 256 "insurance" and 3819 "noinsurance". To make this balanced we will randomly sample 256 "noinsurance" observations.
+```{.r}
+mask <- sample(3819, 256)
+temp <- subset(train.under, CARAVAN %in% 'noinsurance')
+temp <- temp[mask,]
+train.under <- rbind(temp, subset(train.under, CARAVAN %in% 'insurance'))
 
+table(train.under$CARAVAN)
 ```
-## 
-## noinsurance   insurance 
-##        3819         256
-```
+There are now 256 "insurance" and 256 "noinsurance". Let's try some of the same models again.
 
-Before oversampling, there are 256 "insurance" and 3819 "noinsurance". To make them roughly the same we will repeat the "insurance" observations 14 times.
+IGNORE
+The truncating of the dataset has **cut down observations of classes within some variables#**. This means that we will have to redo the factors inside the dataset.
+/IGNORE
 
-```r
-temp <- train.over[grep("^insurance", train.over$CARAVAN), ]
-for (i in 1:14) {
-    train.over <- rbind(train.over, temp)
-}
-table(train.over$CARAVAN)
-```
-
-```
-## 
-## noinsurance   insurance 
-##        3819        3840
-```
-
-There are now 3840 "insurance" and 3819 "noinsurance". Let's try some of the same models again.
 
 ### Logistic Regression
-
-```r
-lrm <- glm(CARAVAN ~ ., train.over, family = binomial)
+```{.r}
+lrm <- glm(CARAVAN~., train.under, family=binomial)
 ```
-
-```
-## Warning: glm.fit: algorithm did not converge
-## Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
-```
-
-Still the same errors as before: "algorithm did not converge"
-
-```r
-lrm.pred <- predict(lrm, test, type = "response")
-```
-
-```
-## Error: factor MAANTHUI has new levels 8
-```
-
-```r
-table(lrm.pred, test$CARAVAN)
-```
-
-```
-##         
-## lrm.pred noinsurance insurance
-##        0        1277        43
-##        1         378        49
-```
-
-Nope, not even working.
+New error this time: contrasts can be applied only to factors with 2 or more levels
+This means that we've cut down too much data for the logistic regression to actually process... Let's try something else for now.
 
 ### Decision Tree
-
-```r
-dt <- rpart(CARAVAN ~ ., train.over, method = "class")
+```{.r}
+dt <- rpart(CARAVAN~., train.under, method='class')
 printcp(dt)
 ```
-
-```
-## 
-## Classification tree:
-## rpart(formula = CARAVAN ~ ., data = train.over, method = "class")
-## 
-## Variables actually used in tree construction:
-## [1] MHHUUR   PBRAND   PPERSAUT STYPE   
-## 
-## Root node error: 3819/7659 = 0.5
-## 
-## n= 7659 
-## 
-##      CP nsplit rel error xerror  xstd
-## 1 0.371      0      1.00   1.02 0.011
-## 2 0.042      1      0.63   0.63 0.011
-## 3 0.011      2      0.59   0.59 0.010
-## 4 0.010      4      0.56   0.57 0.010
-```
-
-Much better this time. 4 variables were used in tree construction this time.
-
-```r
-dt.pred <- predict(dt, test, type = "class")
+The model actually produced results this time. Let's test it.
+```{.r}
+dt.pred <- predict(dt, test, type='class')
 table(dt.pred, test$CARAVAN)
 ```
-
-```
-##              
-## dt.pred       noinsurance insurance
-##   noinsurance        1130        28
-##   insurance           525        64
-```
-
-Unfortunately the results still aren't the best. The false negative rate is huge 525/1655 and the false positive rate is 28/92. 
+These results are comparable to the oversampling trial before.. The false negative rate is huge 641/1655 and the false positive rate is 28/92. 
 
 ### Random Forest
-
-```r
-train.temp <- train.over
+```{.}
+train.temp <- train.under
 train.temp$STYPE <- as.numeric(train.temp$STYPE)
-rf <- randomForest(CARAVAN ~ ., train.temp)
+rf <- randomForest(CARAVAN~., train.temp)
+rf
 ```
-
-These in-sample results are great! This time the forest was able to correctly identify all of the "insurance" observations (though they are oversampled).
-
-```r
+Not the best
+```{.r}
 test.temp <- test
 test.temp$STYPE <- as.numeric(test.temp$STYPE)
 rf.pred <- predict(rf, test.temp)
 table(test$CARAVAN, rf.pred)
 ```
-
-```
-##              rf.pred
-##               noinsurance insurance
-##   noinsurance        1572        83
-##   insurance            84         8
-```
-
 When looking at the test set, unfortunately, the out-of-samply accuracy decreases drastically...
 
 ### Neural Net
-
-```r
-nn <- nnet(CARAVAN ~ ., train.over, size = 1)
-```
-
-```
-## # weights:  657
-## initial  value 5427.194377 
-## iter  10 value 4950.103929
-## iter  20 value 4758.362414
-## iter  30 value 4611.611315
-## iter  40 value 4418.542374
-## iter  50 value 4146.689057
-## iter  60 value 3800.865643
-## iter  70 value 3528.552587
-## iter  80 value 3214.190397
-## iter  90 value 3058.417840
-## iter 100 value 2890.844824
-## final  value 2890.844824 
-## stopped after 100 iterations
-```
-
-
-```r
-nn.pred <- predict(nn, test, type = "class")
+```{.r}
+system.time(nn <- nnet(CARAVAN~., train.under, size=1))
+nn.pred <- predict(nn, test, type='class')
 table(test$CARAVAN, nn.pred)
 ```
+Runs drastically faster, which isn't surprising. The algorithm also **returns only "insurance" classes** for entirety of the test set. It seems the undersampling did not work for NN.
 
-```
-##              nn.pred
-##               insurance noinsurance
-##   noinsurance       343        1312
-##   insurance          34          58
-```
-
+### Summary
+Recommend tossing train.under dataset. With just 512 observations there's just too much information lost.
 
 
 Modeling Iter. 5
 ----------------
 Feature selection
+Continue with oversampled set
+
+### Stepwise Regression
+```{.r}
+lrm <- glm(CARAVAN~., train, family=binomial)
+step <- stepAIC(lrm, directions='both')
+```
+This takes forever...
+
+### Manual
+```{.r}
+lrm1 <- glm(CARAVAN~STYPE, train.over, family=binomial)
+lrm2 <- glm(CARAVAN~MAANTHUI, train.over, family=binomial)
+anova(lrm1, lrm2)
+```
+
+
+Other Tasks
+-----------
+Cross Validation: may help with the skew of the target classe
+Indicator Binning: to solve the Curse of Dimensionality
+
+
