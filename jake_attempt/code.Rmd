@@ -1,5 +1,5 @@
 **Setup**
-```{r}
+```{.r}
 library(kernlab)
 #library(car)
 library(ggplot2)
@@ -23,13 +23,13 @@ library(DAAG)
 2.1 Data Preparation
 ----------------
 ### 2.1.1 Import Dataset
-```{r}
+```{.r}
 data(ticdata)
 #raw <- read.csv('../ticdata2000.csv')
 data <- ticdata[1:5822,]
 ```
 ### 2.1.2 Modify Datatypes
-```{r}
+```{.r}
 #categorical_names <- grep('^m|^caravan', names(data)) # not needed for kernlab
 #data[,categorical_names] <- lapply(data[,categorical_names], as.factor)
 dc <- as.data.frame(lapply(data, as.factor)) # transform all to categorical
@@ -50,7 +50,7 @@ summary(dc)
 
 ### Multivariate EDA: Explanatory vs Reponse
 #### Bar Plots
-```{r, fig.width=4, fig.height=3}
+```{.r, fig.width=4, fig.height=3}
 for(i in 1:85){
   p <- ggplot(dc, aes(x=dc[,i], fill=CARAVAN)) +
     geom_bar() +
@@ -67,7 +67,7 @@ corrgram(dc[1:5,])
 #### Association Plot
 _Works with categorical variables_
 _Paused for the time being to increase speed_
-```{r, fig.width=4, fig.height=4}
+```{.r, fig.width=4, fig.height=4}
 for(i in 1:85){
   t <- table(dc[,c(i, 86)])
   assoc(t, shade=T)

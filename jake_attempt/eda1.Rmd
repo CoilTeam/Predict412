@@ -1,29 +1,16 @@
 **Setup**
 ```{r}
 library(kernlab)
-#library(car)
 library(ggplot2)
-library(corrgram)
-library(vcd)
-library(rpart)
-library(randomForest)
-library(e1071)
-library(nnet)
-library(MASS)
-library(bootstrap)
-library(DAAG)
 ```
 
 ### 2.1.1 Import Dataset
 ```{r}
 data(ticdata)
-#raw <- read.csv('../ticdata2000.csv')
 data <- ticdata[1:5822,]
 ```
 
 #### Association Plot (Original Categ. Vars.)
-_Works with categorical variables_
-_Paused for the time being to increase speed_
 ```{r, fig.width=4, fig.height=4}
 for(i in 1:64){
   t <- table(data[,c(i, 86)])
@@ -51,8 +38,6 @@ for(i in 65:85){
 ```
 
 #### Association Plot (Converted Num. Vars.)
-_Works with categorical variables_
-_Paused for the time being to increase speed_
 ```{r, fig.width=4, fig.height=4}
 dc <- as.data.frame(lapply(data, as.factor)) # transform all to categorical
 
