@@ -1,0 +1,933 @@
+##################################################################################
+#  INTERACTION VS. ORIGINAL DATASET TRAIN/VALIDATE CODE
+##################################################################################
+
+
+##################################################################################
+### 1)  INTERACTION SECTION; seed only for balance; Run the original data splits and preparation on the transformed data set
+##################################################################################
+## >>>>> NOTE, to begin with ticdata_subset.csv run the following & IGNORE ALL STEPS ABOVE
+rm(list=ls()) # removes (almost everything in working environment)
+# set.seed(123) LEAVE OUT
+library(plyr)
+library(xlsx)
+library(sampling)
+library(pls) 
+library(MASS)
+library(kernlab)
+library(ROCR)
+library(caret)
+
+#Set WD (Set target where csv files are located)
+setwd("C:/Users/Chas J. Murphy/Documents/Career/Finance & Statistics/Masters & MFE/Programs/NWestern/Academics/412 Advanced Modeling/Term Project/R files")
+
+
+## This data set replaces the original 9822 and includes the selected subset vars including all interaction variables
+ticdata = read.csv("ticdata_subset.csv", header= TRUE)
+ticdata = ticdata[,-1]
+ticdata[1:5,1:5]
+dim(ticdata) # confirm 9822 x 157
+class(ticdata) # confirm df, if not transform with ticdata = as.data.frame(ticdata)
+
+
+
+### a.  Split 5822 and 4000 as Train and Test sets
+test.set = ticdata[5823:nrow(ticdata),]
+nrow(test.set) # confirm 4000
+tic <- ticdata[1:5822,] # Select training data only
+head(tic)
+rows <- nrow(tic)
+rows
+compcases <- sum(complete.cases(tic))
+# if this logical test returns false, data is missing.
+rows==compcases
+# there is no missing data
+
+
+
+### b.  Split 5822 70/30 Train/Validate stratified on CARAVAN
+summary(tic[,1])
+# there are 348 positive responses in the total set
+posinst <- nrow(tic[tic$CARAVAN=="insurance",])
+# base rate for positive response (CARAVAN=1) is ~ 6%
+baserate <- round(posinst/nrow(tic), digits=4)
+baserate
+# for 70/30 split, the test set should have 104 positive responses, +/- 1
+pos_test_obs <- trunc(baserate*nrow(tic)*.3)
+pos_test_obs
+
+# partition into train and test
+# stratify first, otherwise could be easy for one set to get no pos responses
+# calculate how to stratify to get equal representation in train and test:
+# how many positive instances should the train set have?
+postrain <- trunc(posinst*.7)
+postrain
+# how many negative instances should the train set have?
+negtrain <- trunc((rows-posinst)*.7)
+negtrain
+# add a stratum column which will be used to split the set into train and test:
+strata <- strata(tic, stratanames=c("CARAVAN"), size=c(negtrain,postrain), method="srswor")
+# split into train and test
+tic.train <- tic[rownames(tic) %in% strata$ID_unit,]
+tic.test <- tic[!rownames(tic) %in% strata$ID_unit,]
+# here is how the respective sets look:
+table(tic.train$CARAVAN)
+table(tic.test$CARAVAN)
+table(tic.train$CARAVAN)[1]/sum(table(tic.train$CARAVAN)[1:2])
+table(tic.test$CARAVAN)[1]/sum(table(tic.test$CARAVAN)[1:2])
+# after stratification, the test set is 2 rows longer than the strict 70% calc, and has 105 positive responses rather than the raw calc of 104, which is fine:
+trainsize <- nrow(tic.train)
+testsize <- nrow(tic.test)
+trainsize
+testsize
+# Many algorithms won't do well if the data is presented one class then the other in the train set
+tic.train <- tic.train [sample(nrow(tic.train)),]
+# check = data.frame(names(train.bal.total), names(tic.test))
+# nrow(tic.train)
+
+# break out response and predictors for those methods that need them separated
+ytrain <- ifelse(tic.train$CARAVAN=="insurance",1,0)
+which(colnames(tic.train)=="CARAVAN")
+xtrain <- as.data.frame(tic.train[,-1])
+ytest <- ifelse(tic.test$CARAVAN=="insurance",1,0)
+xtest <- as.data.frame(tic.test[,-1])
+# save number of true positive responses in the test set for use in table later
+test_truepos <- sum(ytest)
+# make a formula for general use across methods
+ticvars <- setdiff(colnames(tic.train),list('CARAVAN'))
+#ticvars
+# ticformula <- as.formula(paste('CARAVAN=="CARAVAN"', paste(ticvars,collapse=' + '),sep=' ~ '))
+ticformula <- as.formula(paste('CARAVAN', paste(ticvars,collapse=' + '),sep=' ~ '))
+ticformula
+
+
+
+
+### c. Scoring
+# set up repository to collect results
+trainpreds <- as.data.frame(ytrain)
+testpreds <- as.data.frame(ytest)
+colnames(trainpreds) <- "trainy"
+colnames(testpreds) <- "testy"
+
+# set up metrics frame - run once
+combinedresults <- as.data.frame(c(1:6))
+combinedresults <- t(combinedresults)
+colnames(combinedresults) <- c("Method_Name", "Test_Set_True_Positives", "TP_Identified", "Baseline", "Lift", "Balanced_Train_Set?")
+# kludge
+combinedresults <- combinedresults[-1,]
+
+# CoIL asked for the 800 test observations with highest probability of being positive responses
+# The final holdout set has 4000 rows, so 800 is the top 20%
+# We want to do the same thing in our test set (to identify our best model)
+# our test set has 1748 rows
+testsetsize <- nrow(tic.test)
+testsetsize
+# we want to select our top 20%, so this is 350 predictions:
+topquintile_test <- round((testsetsize*.2), digits=0)
+topquintile_test
+# In any random sample of 350 observations from the data, there should be 20 or 21 positive responses:
+baserate*topquintile_test
+# this is very close to 21, so let's round it up
+Baseline <- 21
+# the best model is the one that achieves the highest lift over 21 in the top 350
+# (350 with highest predicted Pr(yhat=1|X))
+
+
+# create function to evaluate results
+evaluate <- function(methodname, predictions, combinedresults){
+  lift <- as.data.frame(cbind(ytest, predictions))
+  colnames(lift) <- c("y", "yhat")
+  order <- lift[order(lift$yhat,decreasing=TRUE),]
+  liftcut <- order[1:350,]
+  TP <- sum(liftcut$y)
+  Lift <- TP-Baseline
+  results <- as.vector(c(methodname, test_truepos, TP, Baseline, Lift, BT))
+}
+
+
+# set classification thresholds
+threshold <- seq(.1, 0.9, 0.1)
+
+
+
+
+### D.  Balanced the resulting Train set on CARAVAN 'insurance' class 
+# balance train data
+library(unbalanced)
+set.seed(123)
+### couldn't run the library on the plane, so tried without ####
+#balance the dataset
+# 'type' parameter: The argument type can take the following values: "ubOver" (over-sampling), "ubUnder" (undersampling), "ubSMOTE" (SMOTE), "ubOSS" (One Side Selection), "ubCNN" (Condensed Nearest Neighbor), "ubENN" (Edited Nearest Neighbor), "ubNCL" (Neighborhood Cleaning Rule),"ubTomek" (Tomek Link)
+ytrainfactor <- as.factor(ytrain)
+
+
+
+ytestfactor <- as.factor(ytest) ### believe this was an error (was ytrain)
+
+
+
+balancedData<- ubBalance(as.data.frame(xtrain),ytrainfactor, type="ubOver")
+bal.tic.train<-cbind(balancedData$X,balancedData$Y)
+head(bal.tic.train)
+bal.tic.train <- rename(bal.tic.train, c("balancedData$Y" = "CARAVAN"))
+bal.xtrain <- as.data.frame(balancedData$X)
+head(bal.xtrain)
+bal.ytrain <- bal.tic.train$CARAVAN
+summary(bal.tic.train)
+bal.ytrain <- bal.tic.train$CARAVAN
+bal.tic.train2 = bal.tic.train
+bal.tic.train2$CARAVAN[1:5]
+bal.tic.train2$CARAVAN = factor(bal.tic.train2$CARAVAN, labels=c("noinsurance","insurance"))
+bal.tic.train2$CARAVAN[1:5]
+str(bal.tic.train2[,"CARAVAN"])
+class(bal.tic.train2)
+names(bal.tic.train2)
+nrow(bal.tic.train2)
+count(bal.tic.train$CARAVAN)
+count(tic.train$CARAVAN)
+count(tic.test$CARAVAN)
+count(ytrain)
+
+##################################################################################
+# deal with rank deficiency
+?findLinearCombos()
+linearcomb <- findLinearCombos(bal.tic.train)
+linearcomb
+remove <- linearcomb$remove
+remove
+names(bal.tic.train[,remove])
+dim(bal.tic.train)
+dim(bal.tic.train[,-remove])
+bal.tic.train2 <- bal.tic.train[, -remove]
+findLinearCombos(bal.tic.train2)
+dim(bal.tic.train2)
+
+
+# recast ticformula
+ticvars <- setdiff(colnames(bal.tic.train2),list('CARAVAN'))
+ticformula2 <- as.formula(paste('CARAVAN', paste(ticvars,collapse=' + '),sep=' ~ '))
+ticformula2
+
+##################################################################################
+# 2)	Ran model testing (Interactions)
+##################################################################################
+###################################################################################
+# logistic regression via glm
+# next two lines pass the method name and whether balanced data was used or not
+# to the final results table:
+methodname <- "logistic regression via glm (R) w/Int"
+BT <- "Y"
+dim(bal.tic.train)
+nrow(bal.tic.train)
+dim(tic.test)
+dim(tic.train)
+dim(tic)
+
+tic.glm <- glm(ticformula2, data=bal.tic.train2, family=binomial)
+predictions <- predict(tic.glm, newdata=tic.test, type='response')
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1 #66
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###################################################################################
+# tree model
+library(rpart)
+# next two lines pass the method name and whether balanced data was used or not to the final results table:
+methodname <- "tree model w/Int"
+BT <- "Y"
+# run the tree
+tic.tree <- rpart(ticformula2,data=bal.tic.train2) 
+predictions<- as.data.frame(predict(tic.tree, newdata=tic.test))[,2]
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1 # 52
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###################################################################################
+# neural network
+library(nnet)
+BT <- "Y"
+methodname <- "neural network w/Int"
+tic.nnet <- nnet(ticformula2, data=bal.tic.train2, size=4)
+predictions <- predict(tic.nnet, newdata=tic.test)
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1 #59
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###################################################################################
+# naive bayes
+library(e1071)
+BT <- "Y"
+methodname <- "naive bayes w/Int"
+tic.nb <- naiveBayes(bal.xtrain, bal.ytrain)
+predictions <- predict(tic.nb, newdata=xtest, type='raw')[,2]
+head(predictions)
+results1 <- evaluate(methodname, predictions=predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+#results: 55
+
+# test NB on unbalanced data:
+BT <- "N"
+methodname <- "naive bayes w/Int"
+tic.nb <- naiveBayes(xtrain, ytrain)
+predictions <- predict(tic.nb, newdata=xtest, type='raw')[,2]
+head(predictions)
+results1 <- evaluate(methodname, predictions=predictions, combinedresults)
+results1 #57
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###################################################################################
+# Use RWeka for best Weka run method:
+###################################################################################
+# AdaBoost
+methodname <- "AdaBoostM1_NB w/Int"
+BT <- "Y"
+require(RWeka)
+# need to pull NB into R
+NB <- make_Weka_classifier("weka/classifiers/bayes/NaiveBayes")
+# WOW(AdaBoostM1) WOW(NB)# for control parameter def.s
+Ada = AdaBoostM1(ticformula2, data=bal.tic.train2, 
+                 control = Weka_control(W=NB,S=123, P=80)) 
+# summary(Ada)
+
+predictions <- predict(Ada, newdata=tic.test, type = c("class", "probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1 
+# result = 53
+
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###################################################################################
+# BayesNet
+
+require(RWeka)
+# need to pull algorithm into R
+BayesNet <- make_Weka_classifier("weka/classifiers/bayes/BayesNet")
+
+### INPUTS:
+Algo = BayesNet # do NOT use quotes!
+methodname <- "BayesNet w/Int"
+BT <- "Y"
+
+# WOW(Algo) # for control parameter def.s
+Model = Algo(ticformula2, data=bal.tic.train2) 
+# summary(Model)
+
+predictions <- predict(Model, newdata=tic.test, type = c("class", "probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# result = 47
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+##################################################################################
+# Logistic with cv LogitBoost
+# "LogitBoost with simple regression functions as base learners is used for fitting the logistic models. The optimal number of LogitBoost iterations to perform is cross-validated, which leads to automatic attribute selection.
+
+# require(RWeka)
+# need to pull algorithm into R
+SimpleLogistic <- make_Weka_classifier("weka/classifiers/functions/SimpleLogistic")
+
+### INPUTS:
+Algo = SimpleLogistic # no quotes if pulled into R manually
+methodname <- "Logistic with cv LogitBoost w/Int"
+BT <- "Y"
+
+# WOW(Algo) # for control parameter def.s
+Model = Algo(ticformula2, data=bal.tic.train2,
+             control = Weka_control(M=500,H=50, P=TRUE)) 
+# summary(Model)
+
+predictions <- predict(Model, newdata=tic.test, type = c("class", "probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# results = 62
+
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+##################################################################################
+# Support Vector Machines
+
+# require(RWeka)
+
+### INPUTS:
+Algo = SMO # no quotes!!
+methodname <- "SVM w/Int"
+BT <- "Y"
+
+# WOW(Algo) # for control parameter def.s
+Model = Algo(ticformula2, data=bal.tic.train2)
+#control = Weka_control(M=500,H=50, P=TRUE)) 
+# summary(Model)
+
+predictions <- predict(Model, newdata=tic.test, type = c("class", "probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# results = 58
+
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+###############################################################################
+# Stacking
+# need to pull algorithm into R
+SimpleLogistic <- make_Weka_classifier("weka/classifiers/functions/SimpleLogistic")
+SimpleLogistic
+Stack <- make_Weka_classifier("weka/classifiers/meta/Stacking")
+Stack
+
+### INPUTS:
+Algo = Stack # no quotes!!
+methodname <- "Stack SVM Logit w/Int"
+BT <- "Y"
+
+# WOW(Algo) # for control parameter def.s
+Model = Algo(ticformula2, data=bal.tic.train2,
+             control = Weka_control(B=SMO, B=SimpleLogistic, M="weka.classifiers.functions.Logistic"))
+# summary(Model)
+
+predictions <- predict(Model, newdata=tic.test, type = c("class", "probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# results = 59
+
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###############################################################################
+# Random Committee
+RandCom <- make_Weka_classifier("weka/classifiers/meta/RandomCommittee")
+RandCom
+
+### INPUTS:
+Algo = RandCom # no quotes!!
+methodname <- "RandCom w/Int"
+BT <- "Y"
+
+# WOW(Algo) # for control parameter def.s
+Model = Algo(ticformula2, data=bal.tic.train2)
+# summary(Model)
+
+predictions <- predict(Model, newdata=tic.test, type = c("class", "probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# results = 5
+
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###############################################################################
+# Random Forest
+RF <- make_Weka_classifier("weka/classifiers/trees/RandomForest")
+RF
+
+### INPUTS:
+Algo = RF # no quotes!!
+methodname <- "RandForest w/Int"
+BT <- "Y"
+
+# WOW(Algo) # for control parameter def.s
+Model = Algo(ticformula2, data=bal.tic.train2)
+
+# summary(Model)
+
+predictions <- predict(Model, newdata=tic.test, type = c("class", "probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# results = 4
+
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###############################################################################
+# J48
+J48 <- make_Weka_classifier("weka/classifiers/trees/J48")
+J48
+
+### INPUTS:
+Algo = J48 # no quotes!!
+methodname <- "J48 Tree w/Int"
+BT <- "Y"
+
+# WOW(Algo) # for control parameter def.s
+Model = Algo(ticformula2, data=bal.tic.train2)
+# summary(Model)
+
+predictions <- predict(Model, newdata=tic.test, type = c("class", "probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# results = 3
+
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###############################################################################
+# Dagging
+
+# need to pull algorithm into R (didn't work at first; updated to latest Weka
+# then updated latest Dagging, restarted Weka, still didn't work
+# tried again 30 mins later, it miraculously worked ??)
+require(RWeka)
+Dagging <- make_Weka_classifier("weka/classifiers/meta/Dagging")
+Dagging
+WOW("Dagging")
+
+
+### INPUTS:
+Algo = Dagging # no quotes!!
+methodname <- "Dagging w/Int"
+BT <- "Y"
+
+# WOW(Algo) # for control parameter def.s
+Model = Algo(ticformula2, data=bal.tic.train2, control = Weka_control(
+  F=100, S=1, W=list(SimpleLogistic,
+                     M=500,H=50, P=TRUE)))
+# summary(Model)
+
+predictions <- predict(Model, newdata=tic.test, type = c("class","probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# results = 51
+
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+### With Naive Bayes:
+Model = Algo(ticformula2, data=bal.tic.train2, control = Weka_control(
+  F=100, S=1, W=NB))
+predictions <- predict(Model, newdata=tic.test, type = c("class","probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# results = 53
+
+
+
+
+
+##################################################################################
+### 7)  NON-INTERACTION SECTION; seed only for balance; Run the original data splits and preparation on the transformed data set
+##################################################################################
+rm(list=ls(ticdata)) # removes (almost everything in working environment)
+# set.seed(123) Leave out for higher scores
+library(kernlab)
+# setwd("D:/R Working Directory/Predict412/teamproject")
+# load data and check data integrity
+data(ticdata)
+nrow(ticdata)
+dim(ticdata)
+tic <- ticdata[1:5822,] # Select training data only
+head(tic)
+rows <- nrow(tic)
+compcases <- sum(complete.cases(tic))
+# if this logical test returns false, data is missing.
+rows==compcases
+# there is no missing data
+###################################################################################
+summary(tic)
+# there are 348 positive responses in the total set
+posinst <- nrow(tic[tic$CARAVAN=="insurance",])
+# base rate for positive response (CARAVAN=1) is ~ 6%
+baserate <- round(posinst/nrow(tic), digits=4)
+baserate
+# for 70/30 split, the test set should have 104 positive responses, +/- 1
+pos_test_obs <- trunc(baserate*nrow(tic)*.3)
+pos_test_obs
+###################################################################################
+# partition into train and test
+# stratify first, otherwise could be easy for one set to get no pos responses
+# calculate how to stratify to get equal representation in train and test:
+# how many positive instances should the train set have?
+postrain <- trunc(posinst*.7)
+postrain
+# how many negative instances should the train set have?
+negtrain <- trunc((rows-posinst)*.7)
+negtrain
+# add a stratum column which will be used to split the set into train and test:
+strata <- strata(tic, stratanames=c("CARAVAN"), size=c(negtrain,postrain), method="srswor")
+# split into train and test
+tic.train <- tic[rownames(tic) %in% strata$ID_unit,]
+tic.test <- tic[!rownames(tic) %in% strata$ID_unit,]
+# here is how the respective sets look:
+table(tic.train$CARAVAN)
+table(tic.test$CARAVAN)
+# after stratification, the test set is 2 rows longer than the strict 70% calc, and has 105 positive responses rather than the raw calc of 104, which is fine:
+trainsize <- nrow(tic.train)
+testsize <- nrow(tic.test)
+trainsize
+testsize
+# Many algorithms won't do well if the data is presented one class then the other in the train set
+tic.train <- tic.train [sample(nrow(tic.train)),]
+###################################################################################
+# break out response and predictors for those methods that need them separated
+ytrain <- ifelse(tic.train$CARAVAN=="insurance",1,0)
+which(colnames(tic.train)=="CARAVAN")
+xtrain <- as.data.frame(tic.train[,-86])
+ytest <- ifelse(tic.test$CARAVAN=="insurance",1,0)
+xtest <- as.data.frame(tic.test[,-86])
+# save number of true positive responses in the test set for use in table later
+test_truepos <- sum(ytest)
+# make a formula for general use across methods
+ticvars <- setdiff(colnames(tic.train),list('CARAVAN'))
+#ticvars
+# ticformula <- as.formula(paste('CARAVAN=="CARAVAN"', paste(ticvars,collapse=' + '),sep=' ~ '))
+ticformula <- as.formula(paste('CARAVAN', paste(ticvars,collapse=' + '),sep=' ~ '))
+ticformula
+###################################################################################
+# balance train data
+library(unbalanced)
+set.seed(123)
+#balance the dataset
+# 'type' parameter: The argument type can take the following values: "ubOver" (over-sampling), "ubUnder" (undersampling), "ubSMOTE" (SMOTE), "ubOSS" (One Side Selection), "ubCNN" (Condensed Nearest Neighbor), "ubENN" (Edited Nearest Neighbor), "ubNCL" (Neighborhood Cleaning Rule),"ubTomek" (Tomek Link)
+ytrainfactor <- as.factor(ytrain)
+ytestfactor <- as.factor(ytrain)
+balancedData<- ubBalance(as.data.frame(xtrain),ytrainfactor, type="ubOver")
+bal.tic.train<-cbind(balancedData$X,balancedData$Y)
+head(bal.tic.train)
+bal.tic.train <- rename(bal.tic.train, c("balancedData$Y" = "CARAVAN"))
+bal.xtrain <- as.data.frame(balancedData$X)
+head(bal.xtrain)
+bal.ytrain <- bal.tic.train$CARAVAN
+summary(bal.tic.train)
+
+###################################################################################
+# tree model
+library(rpart)
+# next two lines pass the method name and whether balanced data was used or not to the final results table:
+methodname <- "tree model"
+BT <- "Y"
+# run the tree
+tic.tree <- rpart(ticformula,data=bal.tic.train)
+predictions<- as.data.frame(predict(tic.tree, newdata=tic.test))[,2]
+results1 <- evaluate(methodname, predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+# for computational eda:
+printcp(tic.tree)
+library(maptree)
+draw.tree(tic.tree, cex=0.5, nodeinfo=TRUE, col=gray(0:8 / 8))
+###################################################################################
+# logistic regression via glm
+# next two lines pass the method name and whether balanced data was used or not
+# to the final results table:
+methodname <- "logistic regression via glm (John)"
+BT <- "Y"
+# log regression using the 5 predictors identified by an earlier tree model
+tic.glm <- glm(CARAVAN~ABRAND+APERSAUT+AWAOREG+MGEMOMV+STYPE, data=bal.tic.train, family=binomial(link='logit'))
+predictions <- predict(tic.glm, newdata=tic.test, type='response')
+results1 <- evaluate(methodname, predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###################################################################################
+# logistic regression via glm - NATHAN
+# next two lines pass the method name and whether balanced data was used or not
+# to the final results table:
+methodname <- "logistic regression via glm (Nathan)"
+BT <- "Y"
+# log regression using the 5 predictors identified by an earlier tree model
+tic.glm <- glm(CARAVAN ~ MOPLLAAG+MBERBOER+MAUT1+MINK3045+MINK4575+PWAPART+PWALAND+PPERSAUT+PTRACTOR+PGEZONG+PBRANDnum+PFIETS+AWAPART+AWALAND+APERSAUT+ABESAUT+AVRAAUT+ATRACTOR+ABROM+APERSONG+AGEZONG+ABRAND+APLEZIER+AFIETS+ABYSTAND,
+               data=bal.tic.train, family=binomial)
+predictions <- predict(tic.glm, newdata=tic.test, type='response')
+results1 <- evaluate(methodname, predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+methodname <- "logistic regression via glm (Nathan)"
+BT <- "N"
+# log regression using the 5 predictors identified by an earlier tree model
+tic.glm <- glm(CARAVAN ~ MOPLLAAG+MBERBOER+MAUT1+MINK3045+MINK4575+PWAPART+PWALAND+PPERSAUT+PTRACTOR+PGEZONG+PBRANDnum+PFIETS+AWAPART+AWALAND+APERSAUT+ABESAUT+AVRAAUT+ATRACTOR+ABROM+APERSONG+AGEZONG+ABRAND+APLEZIER+AFIETS+ABYSTAND,
+               data=tic.train, family=binomial)
+predictions <- predict(tic.glm, newdata=tic.test, type='response')
+results1 <- evaluate(methodname, predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+###################################################################################
+# neural network
+library(nnet)
+BT <- "Y"
+methodname <- "neural network (full)"
+tic.nnet <- nnet(ticformula, data=bal.tic.train, size=4)
+predictions <- predict(tic.nnet, newdata=tic.test)
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+# same performance as glm
+###################################################################################
+# naive bayes
+library(e1071)
+BT <- "Y"
+methodname <- "naive bayes"
+tic.nb <- naiveBayes(bal.xtrain, bal.ytrain)
+predictions <- predict(tic.nb, newdata=tic.test[,-86], type='raw')[,2]
+head(predictions)
+results1 <- evaluate(methodname, predictions=predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+# test NB on unbalanced data:
+BT <- "N"
+methodname <- "naive bayes"
+tic.nb <- naiveBayes(xtrain, ytrain)
+predictions <- predict(tic.nb, newdata=tic.test[,-86], type='raw')[,2]
+head(predictions)
+results1 <- evaluate(methodname, predictions=predictions, combinedresults)
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###################################################################################
+# Use RWeka for best Weka run method:
+###################################################################################
+# AdaBoost
+methodname <- "AdaBoostM1_NB (full)"
+BT <- "Y"
+require(RWeka)
+# need to pull NB into R
+NB <- make_Weka_classifier("weka/classifiers/bayes/NaiveBayes")
+# WOW(AdaBoostM1) WOW(NB)# for control parameter def.s
+Ada = AdaBoostM1(ticformula, data=bal.tic.train, 
+                 control = Weka_control(W=NB,S=123, P=80)) 
+# summary(Ada)
+
+predictions <- predict(Ada, newdata=tic.test, type = c("class", "probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1 
+# result = 
+
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###################################################################################
+# BayesNet
+
+require(RWeka)
+# need to pull algorithm into R
+BayesNet <- make_Weka_classifier("weka/classifiers/bayes/BayesNet")
+
+### INPUTS:
+Algo = BayesNet # do NOT use quotes!
+methodname <- "BayesNet (full)"
+BT <- "Y"
+
+# WOW(Algo) # for control parameter def.s
+Model = Algo(ticformula, data=bal.tic.train) 
+# summary(Model)
+
+predictions <- predict(Model, newdata=tic.test, type = c("class", "probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# result = 
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+##################################################################################
+# Logistic with cv LogitBoost
+# "LogitBoost with simple regression functions as base learners is used for fitting the logistic models. The optimal number of LogitBoost iterations to perform is cross-validated, which leads to automatic attribute selection.
+
+# require(RWeka)
+# need to pull algorithm into R
+SimpleLogistic <- make_Weka_classifier("weka/classifiers/functions/SimpleLogistic")
+
+### INPUTS:
+Algo = SimpleLogistic # no quotes if pulled into R manually
+methodname <- "Logistic with cv LogitBoost (full)"
+BT <- "Y"
+
+# WOW(Algo) # for control parameter def.s
+Model = Algo(ticformula, data=bal.tic.train,
+             control = Weka_control(M=500,H=50, P=TRUE)) 
+# summary(Model)
+
+predictions <- predict(Model, newdata=tic.test, type = c("class", "probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# results = 
+
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+##################################################################################
+# Support Vector Machines
+
+# require(RWeka)
+
+### INPUTS:
+Algo = SMO # no quotes!!
+methodname <- "SVM (full)"
+BT <- "Y"
+
+# WOW(Algo) # for control parameter def.s
+Model = Algo(ticformula, data=bal.tic.train)
+#control = Weka_control(M=500,H=50, P=TRUE)) 
+# summary(Model)
+
+predictions <- predict(Model, newdata=tic.test, type = c("class", "probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# results = 
+
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+###############################################################################
+# Stacking
+# need to pull algorithm into R
+SimpleLogistic <- make_Weka_classifier("weka/classifiers/functions/SimpleLogistic")
+SimpleLogistic
+Stack <- make_Weka_classifier("weka/classifiers/meta/Stacking")
+Stack
+
+### INPUTS:
+Algo = Stack # no quotes!!
+methodname <- "Stack SVM Logit (full)"
+BT <- "Y"
+
+# WOW(Algo) # for control parameter def.s
+Model = Algo(ticformula, data=bal.tic.train,
+             control = Weka_control(B=SMO, B=SimpleLogistic, M="weka.classifiers.functions.Logistic"))
+# summary(Model)
+
+predictions <- predict(Model, newdata=tic.test, type = c("class", "probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# results = 
+
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###############################################################################
+# Random Committee
+RandCom <- make_Weka_classifier("weka/classifiers/meta/RandomCommittee")
+RandCom
+
+### INPUTS:
+Algo = RandCom # no quotes!!
+methodname <- "RandCom (full)"
+BT <- "Y"
+
+# WOW(Algo) # for control parameter def.s
+Model = Algo(ticformula, data=bal.tic.train)
+# summary(Model)
+
+predictions <- predict(Model, newdata=tic.test, type = c("class", "probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# results =
+
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###############################################################################
+# Random Forest
+RF <- make_Weka_classifier("weka/classifiers/trees/RandomForest")
+RF
+
+### INPUTS:
+Algo = RF # no quotes!!
+methodname <- "RandForest (full)"
+BT <- "Y"
+
+# WOW(Algo) # for control parameter def.s
+Model = Algo(ticformula, data=bal.tic.train)
+
+# summary(Model)
+
+predictions <- predict(Model, newdata=tic.test, type = c("class", "probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# results =
+
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###############################################################################
+# J48
+J48 <- make_Weka_classifier("weka/classifiers/trees/J48")
+J48
+
+### INPUTS:
+Algo = J48 # no quotes!!
+methodname <- "J48 Tree (full)"
+BT <- "Y"
+
+# WOW(Algo) # for control parameter def.s
+Model = Algo(ticformula, data=bal.tic.train)
+# summary(Model)
+
+predictions <- predict(Model, newdata=tic.test, type = c("class", "probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# results =
+
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+###############################################################################
+# Dagging
+
+# need to pull algorithm into R (didn't work at first; updated to latest Weka
+# then updated latest Dagging, restarted Weka, still didn't work
+# tried again 30 mins later, it miraculously worked ??)
+require(RWeka)
+Dagging <- make_Weka_classifier("weka/classifiers/meta/Dagging")
+Dagging
+WOW("Dagging")
+
+
+### INPUTS:
+Algo = Dagging # no quotes!!
+methodname <- "Dagging (full)"
+BT <- "Y"
+
+# WOW(Algo) # for control parameter def.s
+Model = Algo(ticformula, data=bal.tic.train, control = Weka_control(
+  F=100, S=1, W=list(SimpleLogistic,
+                     M=500,H=50, P=TRUE)))
+# summary(Model)
+
+predictions <- predict(Model, newdata=tic.test, type = c("class","probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# results = 
+
+# add to results table if deemed worthy:
+combinedresults <- rbind(combinedresults, results1)
+combinedresults
+
+### With Naive Bayes:
+Model = Algo(ticformula, data=bal.tic.train, control = Weka_control(
+  F=100, S=1, W=NB))
+predictions <- predict(Model, newdata=tic.test, type = c("class","probability"))
+results1 <- evaluate(methodname, predictions, combinedresults)
+results1
+# results = 
+
+
+
+###############################################################################
+# save final results
+combinedresults
+write.xlsx2(combinedresults,"C:/Users/Chas J. Murphy/Documents/Career/Finance & Statistics/Masters & MFE/Programs/NWestern/Academics/412 Advanced Modeling/Term Project/R files/Int_Vs_Non_Bal_Seed_only_31May14_4_rankdef_fixed.xlsx",col.names=TRUE, row.names=FALSE)
+
+
+
